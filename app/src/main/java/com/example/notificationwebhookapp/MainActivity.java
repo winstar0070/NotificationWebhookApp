@@ -97,6 +97,9 @@ public class MainActivity extends AppCompatActivity {
     private TextView addAppsModeButton;
     private TextView emptyAppsText;
     private ListView appListView;
+    private EditText smsSourceSenderEditText;
+    private EditText smsSourceContainsEditText;
+    private EditText smsDestinationEditText;
     private TextView listenerStatusText;
     private TextView smsStatusText;
     private TextView settingsFeedbackText;
@@ -204,6 +207,8 @@ public class MainActivity extends AppCompatActivity {
         projectWebhookAdapter = new ProjectWebhookSelectionAdapter(this, webhooks);
         projectWebhookListView.setAdapter(projectWebhookAdapter);
         projectWebhookListView.setOnItemClickListener((parent, view, position, id) -> toggleProjectWebhookSelection(webhooks.get(position)));
+        smsDestinationEditText = findViewById(R.id.smsDestinationEditText);
+        findViewById(R.id.addSmsDestinationButton).setOnClickListener(v -> addSmsDestination());
         findViewById(R.id.addProjectButton).setOnClickListener(v -> addProject());
     }
 
@@ -298,7 +303,14 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(this, "Project name required", Toast.LENGTH_SHORT).show();
                 return;
             }
-            ProjectConfig renamed = new ProjectConfig(project.id, nextName, project.selectedWebhookUrls, true);
+            ProjectConfig renamed = new ProjectConfig(
+                    project.id,
+                    nextName,
+                    project.selectedWebhookUrls,
+                    true,
+                    project.sources,
+                    project.destinations
+            );
             WebhookSender.saveProject(this, renamed);
             activeProject = WebhookSender.loadActiveProject(this);
             if (currentProjectTitle != null && activeProject != null) {
@@ -345,6 +357,8 @@ public class MainActivity extends AppCompatActivity {
         appsSectionTitle = findViewById(R.id.appsSectionTitle);
         appsSectionSubtitle = findViewById(R.id.appsSectionSubtitle);
         emptyAppsText = findViewById(R.id.emptyAppsText);
+        smsSourceSenderEditText = findViewById(R.id.smsSourceSenderEditText);
+        smsSourceContainsEditText = findViewById(R.id.smsSourceContainsEditText);
         installedApps = getInstalledApps();
         visibleApps = new ArrayList<>(installedApps);
         appAdapter = new AppListAdapter(this, visibleApps);
@@ -353,6 +367,7 @@ public class MainActivity extends AppCompatActivity {
 
         addAppsModeButton = findViewById(R.id.addAppsModeButton);
         addAppsModeButton.setOnClickListener(v -> setAppAddMode(true));
+        findViewById(R.id.addSmsSourceButton).setOnClickListener(v -> addSmsSourceRule());
 
         saveAppsButton = findViewById(R.id.saveAppsButton);
         saveAppsButton.setOnClickListener(v -> {
@@ -803,6 +818,49 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(this, selected.contains(config.url) ? "Webhook selected" : "Webhook removed from project", Toast.LENGTH_SHORT).show();
     }
 
+    private void addSmsSourceRule() {
+        if (activeProject == null) {
+            Toast.makeText(this, "Open a project first", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String sender = smsSourceSenderEditText.getText() == null ? "" : smsSourceSenderEditText.getText().toString().trim();
+        String contains = smsSourceContainsEditText.getText() == null ? "" : smsSourceContainsEditText.getText().toString().trim();
+        if (sender.isEmpty()) {
+            Toast.makeText(this, "SMS sender required", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        List<RedirectSource> sources = new ArrayList<>(activeProject.sources);
+        sources.add(RedirectSource.sms(sender, contains, true));
+        saveActiveProject(activeProject.selectedWebhookUrls, sources, activeProject.destinations);
+        smsSourceSenderEditText.setText("");
+        smsSourceContainsEditText.setText("");
+        Toast.makeText(this, "SMS source rule added", Toast.LENGTH_SHORT).show();
+    }
+
+    private void addSmsDestination() {
+        if (activeProject == null) {
+            Toast.makeText(this, "Open a project first", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String number = smsDestinationEditText.getText() == null ? "" : smsDestinationEditText.getText().toString().trim();
+        if (number.isEmpty()) {
+            Toast.makeText(this, "SMS destination number required", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        List<RedirectDestination> destinations = new ArrayList<>(activeProject.destinations);
+        destinations.add(RedirectDestination.sms(number, true));
+        saveActiveProject(activeProject.selectedWebhookUrls, activeProject.sources, destinations);
+        smsDestinationEditText.setText("");
+        Toast.makeText(this, "SMS destination added", Toast.LENGTH_SHORT).show();
+    }
+
+    private void saveActiveProject(List<String> selectedWebhookUrls, List<RedirectSource> sources, List<RedirectDestination> destinations) {
+        activeProject = new ProjectConfig(activeProject.id, activeProject.name, selectedWebhookUrls, true, sources, destinations);
+        WebhookSender.saveProject(this, activeProject);
+        refreshProjectList();
+        refreshProjectWebhookSelection();
+    }
+
     private void refreshHistory() {
         if (historyAdapter != null) {
             allHistoryItems = WebhookHistoryStore.load(this);
@@ -950,6 +1008,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private int selectedAppCount(ProjectConfig project) {
+        Set<String> sourceApps = selectedAppPackagesFromSources(project);
+        if (!sourceApps.isEmpty()) {
+            return sourceApps.size();
+        }
         if (project == activeProject && installedApps != null) {
             int count = 0;
             for (AppInfo appInfo : installedApps) {
@@ -1007,15 +1069,27 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences.Editor editor = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
         Set<String> selectedAppsSet = new HashSet<>();
         ProjectConfig project = activeProject == null ? WebhookSender.loadActiveProject(this) : activeProject;
+        List<RedirectSource> sources = new ArrayList<>();
+        if (project != null) {
+            for (RedirectSource source : project.sources) {
+                if (source != null && RedirectSource.TYPE_SMS.equals(source.type)) {
+                    sources.add(source);
+                }
+            }
+        }
 
         for (AppInfo appInfo : installedApps) {
             if (appInfo.isSelected) {
                 selectedAppsSet.add(appInfo.packageName);
+                sources.add(RedirectSource.app(appInfo.packageName, appInfo.name, true));
             }
         }
 
         editor.putStringSet(selectedAppsKey(project), selectedAppsSet);
         editor.apply();
+        if (project != null) {
+            saveActiveProject(project.selectedWebhookUrls, sources, project.destinations);
+        }
         Log.d(TAG, "Selected apps saved for project " + (project == null ? "global" : project.id) + ": " + selectedAppsSet);
     }
 
@@ -1033,6 +1107,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private Set<String> loadSelectedAppPackages(ProjectConfig project) {
+        Set<String> sourceApps = selectedAppPackagesFromSources(project);
+        if (!sourceApps.isEmpty()) {
+            return sourceApps;
+        }
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         String projectKey = selectedAppsKey(project);
         if (prefs.contains(projectKey)) {
@@ -1050,10 +1128,34 @@ public class MainActivity extends AppCompatActivity {
                 legacySelectedApps = new HashSet<>(Arrays.asList(selectedAppsString.split(",")));
             }
         }
-        if (!legacySelectedApps.isEmpty() && project != null) {
+        if (!legacySelectedApps.isEmpty()
+                && project != null
+                && activeProject != null
+                && project.id.equals(activeProject.id)) {
             prefs.edit().putStringSet(projectKey, legacySelectedApps).apply();
+            List<RedirectSource> migratedSources = new ArrayList<>(project.sources);
+            for (String packageName : legacySelectedApps) {
+                migratedSources.add(RedirectSource.app(packageName, "", true));
+            }
+            saveActiveProject(project.selectedWebhookUrls, migratedSources, project.destinations);
         }
         return legacySelectedApps;
+    }
+
+    private Set<String> selectedAppPackagesFromSources(ProjectConfig project) {
+        Set<String> packages = new HashSet<>();
+        if (project == null) {
+            return packages;
+        }
+        for (RedirectSource source : project.sources) {
+            if (source != null
+                    && source.enabled
+                    && RedirectSource.TYPE_APP.equals(source.type)
+                    && !source.packageName.isEmpty()) {
+                packages.add(source.packageName);
+            }
+        }
+        return packages;
     }
 
     private boolean shouldUseLegacySelectedApps(ProjectConfig project) {
@@ -1369,7 +1471,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             WebhookConfig config = getItem(position);
-            boolean selected = activeProject != null && activeProject.selectedWebhookUrls.contains(config.url);
+            boolean selected = activeProject != null && activeProject.enabledWebhookDestinationUrls().contains(config.url);
             TextView title = convertView.findViewById(R.id.webhookTitle);
             TextView subtitle = convertView.findViewById(R.id.webhookSubtitle);
             title.setText(config.method + "  " + config.hostPreview());
@@ -1415,7 +1517,7 @@ public class MainActivity extends AppCompatActivity {
             ImageButton deleteButton = convertView.findViewById(R.id.deleteProjectItemButton);
             ImageButton openButton = convertView.findViewById(R.id.openProjectItemButton);
             title.setText(project.name);
-            subtitle.setText(project.selectedWebhookUrls.size() + " selected webhooks + " + selectedAppCount(project) + " selected apps");
+            subtitle.setText(project.enabledSourceCount() + " sources + " + project.enabledDestinationCount() + " destinations");
             renameButton.setOnClickListener(v -> showRenameProjectDialog(project));
             deleteButton.setOnClickListener(v -> confirmDeleteProject(project));
             openButton.setOnClickListener(v -> openProject(project));

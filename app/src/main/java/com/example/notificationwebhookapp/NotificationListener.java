@@ -96,6 +96,16 @@ public class NotificationListener extends NotificationListenerService {
                     notificationPayload.put("key", sbn.getKey() == null ? "" : sbn.getKey());
 
                     payload.put("type", "notification");
+                    if (activeProject != null) {
+                        JSONObject projectPayload = new JSONObject();
+                        projectPayload.put("id", activeProject.id);
+                        projectPayload.put("name", activeProject.name);
+                        payload.put("project", projectPayload);
+                        payload.put("destinationCount", activeProject.enabledDestinationCount());
+                    }
+                    payload.put("sourceKind", "app");
+                    payload.put("sourceType", "app");
+                    payload.put("source", packageName);
                     payload.put("package", packageName);
                     payload.put("packageName", packageName);
                     payload.put("title", title);
@@ -107,6 +117,7 @@ public class NotificationListener extends NotificationListenerService {
                 }
 
                 WebhookSender.send(this, payload.toString());
+                forwardToSmsDestinations(activeProject, packageName, title, text);
                 WebhookHistoryStore.recordNotification(
                         this,
                         packageName,
@@ -114,7 +125,9 @@ public class NotificationListener extends NotificationListenerService {
                         text,
                         true,
                         true,
-                        "Webhook send queued"
+                        activeProject == null || activeProject.enabledSmsDestinationNumbers().isEmpty()
+                                ? "Webhook send queued"
+                                : "Webhook and SMS redirects queued"
                 );
                 Log.d(TAG, "Webhook message queued from notification listener");
             } else {
@@ -144,6 +157,10 @@ public class NotificationListener extends NotificationListenerService {
     }
 
     private Set<String> loadSelectedAppsForProject(ProjectConfig project) {
+        Set<String> sourceApps = selectedAppPackagesFromSources(project);
+        if (!sourceApps.isEmpty()) {
+            return sourceApps;
+        }
         SharedPreferences sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         String projectKey = selectedAppsKey(project);
         if (sharedPreferences.contains(projectKey)) {
@@ -165,6 +182,34 @@ public class NotificationListener extends NotificationListenerService {
             sharedPreferences.edit().putStringSet(projectKey, legacySelectedApps).apply();
         }
         return legacySelectedApps;
+    }
+
+    private Set<String> selectedAppPackagesFromSources(ProjectConfig project) {
+        Set<String> packages = new HashSet<>();
+        if (project == null) {
+            return packages;
+        }
+        for (RedirectSource source : project.sources) {
+            if (source != null
+                    && source.enabled
+                    && RedirectSource.TYPE_APP.equals(source.type)
+                    && !source.packageName.isEmpty()) {
+                packages.add(source.packageName);
+            }
+        }
+        return packages;
+    }
+
+    private void forwardToSmsDestinations(ProjectConfig project, String packageName, String title, String text) {
+        if (project == null) {
+            return;
+        }
+        String message = "Notification " + packageName
+                + (title == null || title.isEmpty() ? "" : " / " + title)
+                + (text == null || text.isEmpty() ? "" : ": " + text);
+        for (String number : project.enabledSmsDestinationNumbers()) {
+            SmsForwarder.forward(this, number, packageName, message);
+        }
     }
 
     private boolean shouldUseLegacySelectedApps(ProjectConfig project) {

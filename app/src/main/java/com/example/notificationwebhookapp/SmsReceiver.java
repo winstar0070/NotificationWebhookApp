@@ -33,35 +33,84 @@ public class SmsReceiver extends BroadcastReceiver {
                 messageBody.append(smsMessage.getMessageBody());
             }
 
+            SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            ProjectConfig activeProject = WebhookSender.loadActiveProject(context);
             JSONObject payload = new JSONObject()
                     .put("type", "sms")
+                    .put("sourceKind", "sms")
+                    .put("sourceType", "sms")
+                    .put("source", sender)
                     .put("from", sender)
                     .put("message", messageBody.toString())
                     .put("timestamp", System.currentTimeMillis());
+            if (activeProject != null) {
+                JSONObject projectPayload = new JSONObject()
+                        .put("id", activeProject.id)
+                        .put("name", activeProject.name);
+                payload.put("project", projectPayload);
+                payload.put("destinationCount", activeProject.enabledDestinationCount());
+            }
+            if (!matchesSmsSource(activeProject, sender, messageBody.toString())) {
+                WebhookHistoryStore.recordRedirectEvent(
+                        context,
+                        "sms",
+                        sender,
+                        messageBody.toString(),
+                        false,
+                        false,
+                        "No matching SMS source rule"
+                );
+                SmsForwardStatusReceiver.recordStatus(context, "Incoming SMS skipped: no matching SMS source rule");
+                return;
+            }
 
-            SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            int queuedDestinationCount = 0;
             if (prefs.getBoolean(SMS_TO_WEBHOOK_KEY, true)) {
                 WebhookSender.send(context, payload.toString());
+                queuedDestinationCount += activeProject == null ? 0 : activeProject.enabledWebhookDestinationUrls().size();
                 Log.d(TAG, "SMS webhook queued");
             }
-            forwardSmsIfEnabled(context, prefs, sender, messageBody.toString());
+            queuedDestinationCount += forwardSmsDestinations(context, activeProject, sender, messageBody.toString());
+            WebhookHistoryStore.recordRedirectEvent(
+                    context,
+                    "sms",
+                    sender,
+                    messageBody.toString(),
+                    true,
+                    queuedDestinationCount > 0,
+                    queuedDestinationCount > 0
+                            ? "Redirect queued to " + queuedDestinationCount + " destinations"
+                            : "Matched SMS source, no enabled destinations"
+            );
         } catch (Exception e) {
             SmsForwardStatusReceiver.recordStatus(context, "Incoming SMS processing failed: " + e.getMessage());
             Log.e(TAG, "Failed to process SMS", e);
         }
     }
 
-    private void forwardSmsIfEnabled(Context context, SharedPreferences prefs, String sender, String message) {
-        if (!prefs.getBoolean(SMS_FORWARD_ENABLED_KEY, false)) {
-            SmsForwardStatusReceiver.recordStatus(context, "Incoming SMS received. Forwarding is off.");
-            return;
+    private boolean matchesSmsSource(ProjectConfig project, String sender, String message) {
+        if (project == null) {
+            return false;
         }
-        String targetNumber = prefs.getString(SMS_FORWARD_NUMBER_KEY, "");
-        if (targetNumber == null || targetNumber.trim().isEmpty()) {
-            SmsForwardStatusReceiver.recordStatus(context, "Incoming SMS received. Forward target is empty.");
-            Log.w(TAG, "SMS forwarding skipped: target number is empty");
-            return;
+        for (RedirectSource source : project.sources) {
+            if (source != null && source.matchesSms(sender, message)) {
+                return true;
+            }
         }
-        SmsForwarder.forward(context, targetNumber, sender, message);
+        return false;
+    }
+
+    private int forwardSmsDestinations(Context context, ProjectConfig project, String sender, String message) {
+        if (project == null || project.enabledSmsDestinationNumbers().isEmpty()) {
+            SmsForwardStatusReceiver.recordStatus(context, "Incoming SMS matched. No SMS destinations configured.");
+            return 0;
+        }
+        int queued = 0;
+        for (String targetNumber : project.enabledSmsDestinationNumbers()) {
+            if (SmsForwarder.forward(context, targetNumber, sender, message)) {
+                queued++;
+            }
+        }
+        return queued;
     }
 }

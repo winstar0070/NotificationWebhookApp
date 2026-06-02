@@ -32,6 +32,8 @@ public final class WebhookSender {
     private static final String LEGACY_PREFS_NAME = "NotificationWebhookPrefs";
     private static final String WEBHOOK_URL_KEY = "webhookUrl";
     private static final String WEBHOOK_METHOD_KEY = "webhookMethod";
+    private static final String SMS_FORWARD_ENABLED_KEY = "SmsForwardEnabled";
+    private static final String SMS_FORWARD_NUMBER_KEY = "SmsForwardNumber";
     private static final String WEBHOOKS_KEY = "webhooks";
     private static final String PROJECTS_KEY = "projects";
     private static final String ACTIVE_PROJECT_ID_KEY = "activeProjectId";
@@ -158,7 +160,7 @@ public final class WebhookSender {
         List<WebhookConfig> allConfigs = loadAllWebhookConfigs(context);
         ProjectConfig activeProject = loadActiveProject(context);
         if (activeProject != null) {
-            return filterBySelectedUrls(allConfigs, activeProject.selectedWebhookUrls);
+            return filterBySelectedUrls(allConfigs, activeProject.enabledWebhookDestinationUrls());
         }
 
         return allConfigs;
@@ -247,14 +249,30 @@ public final class WebhookSender {
         List<ProjectConfig> projects = loadProjects(context);
         for (ProjectConfig project : projects) {
             if (project.id.equals(activeId)) {
-                return project;
+                return migrateLegacySmsDestination(context, project);
             }
         }
         if (!projects.isEmpty()) {
             setActiveProject(context, projects.get(0).id);
-            return projects.get(0);
+            return migrateLegacySmsDestination(context, projects.get(0));
         }
         return null;
+    }
+
+    private static ProjectConfig migrateLegacySmsDestination(Context context, ProjectConfig project) {
+        if (project == null || !project.enabledSmsDestinationNumbers().isEmpty()) {
+            return project;
+        }
+        SharedPreferences legacyPrefs = context.getSharedPreferences(LEGACY_PREFS_NAME, Context.MODE_PRIVATE);
+        String number = legacyPrefs.getString(SMS_FORWARD_NUMBER_KEY, "");
+        if (!legacyPrefs.getBoolean(SMS_FORWARD_ENABLED_KEY, false) || number == null || number.trim().isEmpty()) {
+            return project;
+        }
+        List<RedirectDestination> destinations = new ArrayList<>(project.destinations);
+        destinations.add(RedirectDestination.sms(number.trim(), true));
+        ProjectConfig migrated = new ProjectConfig(project.id, project.name, project.selectedWebhookUrls, true, project.sources, destinations);
+        saveProject(context, migrated);
+        return migrated;
     }
 
     public static void saveProject(Context context, ProjectConfig project) {
@@ -318,7 +336,20 @@ public final class WebhookSender {
         if (project == null) {
             return;
         }
-        saveProject(context, new ProjectConfig(project.id, project.name, selectedWebhookUrls, true));
+        List<RedirectDestination> destinations = new ArrayList<>();
+        for (RedirectDestination destination : project.destinations) {
+            if (destination != null && RedirectDestination.TYPE_SMS.equals(destination.type)) {
+                destinations.add(destination);
+            }
+        }
+        if (selectedWebhookUrls != null) {
+            for (String url : selectedWebhookUrls) {
+                if (url != null && !url.trim().isEmpty()) {
+                    destinations.add(RedirectDestination.webhook(url.trim(), true));
+                }
+            }
+        }
+        saveProject(context, new ProjectConfig(project.id, project.name, selectedWebhookUrls, true, project.sources, destinations));
     }
 
     private static List<WebhookConfig> filterBySelectedUrls(List<WebhookConfig> configs, List<String> selectedUrls) {
@@ -366,14 +397,23 @@ public final class WebhookSender {
         boolean changed = false;
         for (ProjectConfig project : projects) {
             List<String> selected = new ArrayList<>();
-            for (String url : project.selectedWebhookUrls) {
+            for (String url : project.enabledWebhookDestinationUrls()) {
                 if (validUrls.contains(url)) {
                     selected.add(url);
                 } else {
                     changed = true;
                 }
             }
-            next.add(new ProjectConfig(project.id, project.name, selected, true));
+            List<RedirectDestination> destinations = new ArrayList<>();
+            for (RedirectDestination destination : project.destinations) {
+                if (destination != null && RedirectDestination.TYPE_SMS.equals(destination.type)) {
+                    destinations.add(destination);
+                }
+            }
+            for (String url : selected) {
+                destinations.add(RedirectDestination.webhook(url, true));
+            }
+            next.add(new ProjectConfig(project.id, project.name, selected, true, project.sources, destinations));
         }
         if (changed) {
             ProjectConfig active = loadActiveProject(context);

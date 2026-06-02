@@ -114,6 +114,44 @@ public final class WebhookHistoryStore {
         prefs.edit().putString(HISTORY_KEY, next.toString()).apply();
     }
 
+    public static synchronized void recordRedirectEvent(
+            Context context,
+            String sourceType,
+            String sourceName,
+            String message,
+            boolean matched,
+            boolean queued,
+            String reason
+    ) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        JSONArray history = readArray(prefs);
+        JSONArray next = new JSONArray();
+
+        JSONObject item = new JSONObject();
+        try {
+            item.put("timestamp", System.currentTimeMillis());
+            item.put("eventType", "redirect");
+            item.put("sourceType", sourceType == null || sourceType.isEmpty() ? "source" : sourceType);
+            item.put("packageName", sourceName == null ? "" : sourceName);
+            item.put("messagePreview", trimPreview(message));
+            item.put("selected", matched);
+            item.put("webhookQueued", queued);
+            item.put("success", queued);
+            item.put("error", reason == null ? "" : reason);
+            next.put(item);
+        } catch (Exception ignored) {
+        }
+
+        for (int i = 0; i < history.length() && next.length() < MAX_HISTORY; i++) {
+            JSONObject existing = history.optJSONObject(i);
+            if (existing != null) {
+                next.put(existing);
+            }
+        }
+
+        prefs.edit().putString(HISTORY_KEY, next.toString()).apply();
+    }
+
     public static synchronized List<HistoryItem> load(Context context) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         JSONArray history = readArray(prefs);
@@ -215,6 +253,12 @@ public final class WebhookHistoryStore {
                 }
                 return selected ? "DETECTED -> NOT QUEUED" : "DETECTED -> FILTERED";
             }
+            if ("redirect".equals(eventType)) {
+                if (webhookQueued) {
+                    return "REDIRECT QUEUED  " + sourceType.toUpperCase(Locale.US);
+                }
+                return selected ? "REDIRECT SKIPPED  " + sourceType.toUpperCase(Locale.US) : "SOURCE SKIPPED  " + sourceType.toUpperCase(Locale.US);
+            }
 
             String status = success ? "SUCCESS" : "FAILED";
             String code = httpCode > 0 ? " " + httpCode : "";
@@ -226,6 +270,10 @@ public final class WebhookHistoryStore {
                 String source = packageName == null || packageName.isEmpty() ? "unknown package" : packageName;
                 String name = notificationTitle == null || notificationTitle.isEmpty() ? "" : "  " + notificationTitle;
                 return formatTime(timestamp) + "  " + source + name;
+            }
+            if ("redirect".equals(eventType)) {
+                String source = packageName == null || packageName.isEmpty() ? "unknown source" : packageName;
+                return formatTime(timestamp) + "  " + source;
             }
             String source = packageName == null || packageName.isEmpty() ? "" : "  " + packageName;
             return formatTime(timestamp) + "  " + method + "  " + urlPreview + source;
@@ -239,6 +287,16 @@ public final class WebhookHistoryStore {
                         + "\nMessage: " + (messagePreview == null || messagePreview.isEmpty() ? "-" : messagePreview)
                         + "\nSelected app: " + (selected ? "Yes" : "No")
                         + "\nWebhook queued: " + (webhookQueued ? "Yes" : "No")
+                        + "\nReason: " + (error == null || error.isEmpty() ? "-" : error)
+                        + "\nTime: " + formatTime(timestamp);
+            }
+            if ("redirect".equals(eventType)) {
+                return "Event: Redirect source"
+                        + "\nSource type: " + sourceType
+                        + "\nSource: " + (packageName == null || packageName.isEmpty() ? "-" : packageName)
+                        + "\nMessage: " + (messagePreview == null || messagePreview.isEmpty() ? "-" : messagePreview)
+                        + "\nMatched rule: " + (selected ? "Yes" : "No")
+                        + "\nQueued: " + (webhookQueued ? "Yes" : "No")
                         + "\nReason: " + (error == null || error.isEmpty() ? "-" : error)
                         + "\nTime: " + formatTime(timestamp);
             }

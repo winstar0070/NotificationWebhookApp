@@ -190,7 +190,7 @@
             android:paddingStart="6dp"
             android:paddingEnd="6dp"
             android:layout_weight="1"
-            android:text="Webhooks"
+            android:text="Destinations"
             android:textAllCaps="false"
             android:textSize="14sp" />
 
@@ -224,7 +224,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="Selected webhooks"
+            android:text="Destinations"
             android:textColor="#111827"
             android:textSize="18sp"
             android:textStyle="bold" />
@@ -233,7 +233,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="Choose which global webhooks this project sends to."
+            android:text="Choose project-wide webhook and SMS destinations."
             android:textColor="#64748B"
             android:textSize="14sp" />
 
@@ -246,10 +246,42 @@
             android:background="@drawable/button_secondary"
             android:minHeight="0dp"
             android:minWidth="0dp"
-            android:text="Open Webhook Settings"
+            android:text="Open Webhook Destination Settings"
             android:textAllCaps="false"
             android:textColor="#111827"
             android:textSize="14sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
+
+            <EditText
+                android:id="@+id/smsDestinationEditText"
+                android:layout_width="0dp"
+                android:layout_height="42dp"
+                android:layout_weight="1"
+                android:background="@drawable/input_background"
+                android:gravity="center_vertical"
+                android:hint="SMS destination number"
+                android:inputType="phone"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:singleLine="true"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/addSmsDestinationButton"
+                android:layout_width="72dp"
+                android:layout_height="42dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/button_secondary"
+                android:gravity="center"
+                android:text="Add"
+                android:textColor="#111827"
+                android:textSize="13sp" />
+        </LinearLayout>
 
         <ListView
             android:id="@+id/projectWebhookListView"
@@ -274,7 +306,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="Selected apps"
+            android:text="Sources"
             android:textColor="#111827"
             android:textSize="18sp"
             android:textStyle="bold" />
@@ -284,7 +316,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="Only selected apps can trigger notification webhooks."
+            android:text="Choose app notification sources and SMS rules."
             android:textColor="#64748B"
             android:textSize="13sp" />
 
@@ -322,6 +354,52 @@
                 android:textAllCaps="false"
                 android:textColor="#111827"
                 android:textSize="14sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/smsSourceRuleRow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="vertical">
+
+            <EditText
+                android:id="@+id/smsSourceSenderEditText"
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:background="@drawable/input_background"
+                android:gravity="center_vertical"
+                android:hint="SMS source sender or phone"
+                android:inputType="phone"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:singleLine="true"
+                android:textSize="13sp" />
+
+            <EditText
+                android:id="@+id/smsSourceContainsEditText"
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/input_background"
+                android:gravity="center_vertical"
+                android:hint="Optional body contains keyword"
+                android:inputType="text"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:singleLine="true"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/addSmsSourceButton"
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/button_secondary"
+                android:gravity="center"
+                android:text="Add SMS Source Rule"
+                android:textColor="#111827"
+                android:textSize="13sp" />
         </LinearLayout>
 
         <ListView
