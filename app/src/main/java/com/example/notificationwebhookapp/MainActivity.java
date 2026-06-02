@@ -227,6 +227,8 @@ public class MainActivity extends AppCompatActivity {
             activeProject = project;
         }
         currentProjectTitle.setText(activeProject.name);
+        loadSavedAppSelections();
+        setAppAddMode(false);
         refreshGlobalWebhooks();
         refreshProjectWebhookSelection();
         selectedWebhookIndex = -1;
@@ -939,7 +941,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private int selectedAppCount() {
-        if (installedApps != null) {
+        return selectedAppCount(activeProject);
+    }
+
+    private int selectedAppCount(ProjectConfig project) {
+        if (project == activeProject && installedApps != null) {
             int count = 0;
             for (AppInfo appInfo : installedApps) {
                 if (appInfo.isSelected) {
@@ -948,8 +954,7 @@ public class MainActivity extends AppCompatActivity {
             }
             return count;
         }
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        return prefs.getStringSet(SELECTED_APPS_KEY, new HashSet<>()).size();
+        return loadSelectedAppPackages(project).size();
     }
 
     private void handleIntent(Intent intent) {
@@ -996,6 +1001,7 @@ public class MainActivity extends AppCompatActivity {
     private void saveSelectedApps() {
         SharedPreferences.Editor editor = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
         Set<String> selectedAppsSet = new HashSet<>();
+        ProjectConfig project = activeProject == null ? WebhookSender.loadActiveProject(this) : activeProject;
 
         for (AppInfo appInfo : installedApps) {
             if (appInfo.isSelected) {
@@ -1003,32 +1009,52 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        editor.putStringSet(SELECTED_APPS_KEY, selectedAppsSet);
+        editor.putStringSet(selectedAppsKey(project), selectedAppsSet);
         editor.apply();
-        Log.d(TAG, "Selected apps saved: " + selectedAppsSet);
+        Log.d(TAG, "Selected apps saved for project " + (project == null ? "global" : project.id) + ": " + selectedAppsSet);
     }
 
     private void loadSavedAppSelections() {
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        Set<String> selectedAppsSet = prefs.getStringSet(SELECTED_APPS_KEY, new HashSet<>());
+        Set<String> selectedAppsSet = loadSelectedAppPackages(activeProject);
 
-        if (selectedAppsSet.isEmpty()) {
-            String selectedAppsString = prefs.getString(SELECTED_APPS_KEY, "");
-            if (!selectedAppsString.isEmpty()) {
-                selectedAppsSet = new HashSet<>(Arrays.asList(selectedAppsString.split(",")));
-                prefs.edit().putStringSet(SELECTED_APPS_KEY, selectedAppsSet).apply();
-            }
+        for (AppInfo appInfo : installedApps) {
+            appInfo.isSelected = false;
         }
 
-        for (String packageName : selectedAppsSet) {
-            for (AppInfo appInfo : installedApps) {
-                if (appInfo.packageName.equals(packageName)) {
-                    appInfo.isSelected = true;
-                    break;
-                }
-            }
+        for (AppInfo appInfo : installedApps) {
+            appInfo.isSelected = selectedAppsSet.contains(appInfo.packageName);
         }
         appAdapter.notifyDataSetChanged();
+    }
+
+    private Set<String> loadSelectedAppPackages(ProjectConfig project) {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        String projectKey = selectedAppsKey(project);
+        if (prefs.contains(projectKey)) {
+            return new HashSet<>(prefs.getStringSet(projectKey, new HashSet<>()));
+        }
+
+        if (project != null && !"Default Project".equals(project.name)) {
+            return new HashSet<>();
+        }
+
+        Set<String> legacySelectedApps = new HashSet<>(prefs.getStringSet(SELECTED_APPS_KEY, new HashSet<>()));
+        if (legacySelectedApps.isEmpty()) {
+            String selectedAppsString = prefs.getString(SELECTED_APPS_KEY, "");
+            if (!selectedAppsString.isEmpty()) {
+                legacySelectedApps = new HashSet<>(Arrays.asList(selectedAppsString.split(",")));
+            }
+        }
+        if (!legacySelectedApps.isEmpty() && project != null) {
+            prefs.edit().putStringSet(projectKey, legacySelectedApps).apply();
+        }
+        return legacySelectedApps;
+    }
+
+    private String selectedAppsKey(ProjectConfig project) {
+        return project == null || project.id == null || project.id.isEmpty()
+                ? SELECTED_APPS_KEY
+                : SELECTED_APPS_KEY + "_" + project.id;
     }
 
     private void checkNotificationListenerEnabled() {
@@ -1326,7 +1352,7 @@ public class MainActivity extends AppCompatActivity {
             ImageButton deleteButton = convertView.findViewById(R.id.deleteProjectItemButton);
             ImageButton openButton = convertView.findViewById(R.id.openProjectItemButton);
             title.setText(project.name);
-            subtitle.setText(project.selectedWebhookUrls.size() + " selected webhooks + " + selectedAppCount() + " selected apps");
+            subtitle.setText(project.selectedWebhookUrls.size() + " selected webhooks + " + selectedAppCount(project) + " selected apps");
             renameButton.setOnClickListener(v -> showRenameProjectDialog(project));
             deleteButton.setOnClickListener(v -> confirmDeleteProject(project));
             openButton.setOnClickListener(v -> openProject(project));

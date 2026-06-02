@@ -12,6 +12,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -37,10 +38,12 @@ public class NotificationListener extends NotificationListenerService {
 
         String packageName = sbn.getPackageName();
 
-        SharedPreferences sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        Set<String> selectedApps = sharedPreferences.getStringSet(SELECTED_APPS_KEY, new HashSet<>());
+        ProjectConfig activeProject = WebhookSender.loadActiveProject(this);
+        Set<String> selectedApps = loadSelectedAppsForProject(activeProject);
 
-        Log.d(TAG, "Selected apps: " + selectedApps);
+        Log.d(TAG, "Selected apps for project "
+                + (activeProject == null ? "global" : activeProject.id)
+                + ": " + selectedApps);
 
         if (selectedApps.contains(packageName)) {
             Log.d(TAG, "Notification is from a selected app: " + packageName);
@@ -138,6 +141,36 @@ public class NotificationListener extends NotificationListenerService {
             );
             Log.d(TAG, "Notification is not from a selected app: " + packageName);
         }
+    }
+
+    private Set<String> loadSelectedAppsForProject(ProjectConfig project) {
+        SharedPreferences sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        String projectKey = selectedAppsKey(project);
+        if (sharedPreferences.contains(projectKey)) {
+            return new HashSet<>(sharedPreferences.getStringSet(projectKey, new HashSet<>()));
+        }
+
+        if (project != null && !"Default Project".equals(project.name)) {
+            return new HashSet<>();
+        }
+
+        Set<String> legacySelectedApps = new HashSet<>(sharedPreferences.getStringSet(SELECTED_APPS_KEY, new HashSet<>()));
+        if (legacySelectedApps.isEmpty()) {
+            String selectedAppsString = sharedPreferences.getString(SELECTED_APPS_KEY, "");
+            if (!selectedAppsString.isEmpty()) {
+                legacySelectedApps = new HashSet<>(Arrays.asList(selectedAppsString.split(",")));
+            }
+        }
+        if (!legacySelectedApps.isEmpty() && project != null) {
+            sharedPreferences.edit().putStringSet(projectKey, legacySelectedApps).apply();
+        }
+        return legacySelectedApps;
+    }
+
+    private String selectedAppsKey(ProjectConfig project) {
+        return project == null || project.id == null || project.id.isEmpty()
+                ? SELECTED_APPS_KEY
+                : SELECTED_APPS_KEY + "_" + project.id;
     }
 
     private static String textFromExtra(Notification notification, String key) {
