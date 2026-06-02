@@ -1,32 +1,472 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/mainRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:gravity="center">
+    android:paddingStart="20dp"
+    android:paddingTop="16dp"
+    android:paddingEnd="20dp"
+    android:paddingBottom="16dp">
 
-    <Button
-        android:id="@+id/settingsButton"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:id="@+id/projectListSection"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/appTitleText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Notification Webhooks"
+            android:textColor="#111827"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/appSubtitleText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Choose a project to manage app alerts and webhooks."
+            android:textColor="#64748B"
+            android:textSize="14sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="horizontal">
+
+            <EditText
+                android:id="@+id/projectNameEditText"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:background="@drawable/input_background"
+                android:gravity="center_vertical"
+                android:hint="Project name"
+                android:inputType="text"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:singleLine="true"
+                android:textSize="16sp" />
+
+            <Button
+                android:id="@+id/addProjectButton"
+                android:layout_width="104dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/button_primary"
+                android:text="Add"
+                android:textColor="#FFFFFF" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/manageGlobalWebhooksButton"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/button_secondary"
+            android:text="Manage Webhooks"
+            android:textAllCaps="false" />
+
+        <ListView
+            android:id="@+id/projectListView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="16dp"
+            android:layout_weight="1" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/projectDetailSection"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Settings" />
+        android:orientation="horizontal">
 
-    <Button
-        android:id="@+id/enableNotificationsButton"
-        android:layout_width="wrap_content"
+        <Button
+            android:id="@+id/backToProjectsButton"
+            android:layout_width="64dp"
+            android:layout_height="44dp"
+            android:background="@drawable/button_secondary"
+            android:textSize="12sp"
+            android:text="Back" />
+
+        <TextView
+            android:id="@+id/currentProjectTitle"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:textColor="#111827"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/deleteProjectButton"
+            android:layout_width="72dp"
+            android:layout_height="44dp"
+            android:background="@drawable/button_secondary"
+            android:textSize="12sp"
+            android:text="Delete" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Enable Notifications" />
+        android:layout_marginTop="16dp"
+        android:orientation="horizontal">
 
-    <ListView
-        android:id="@+id/appList"
+        <Button
+            android:id="@+id/appsTabButton"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:background="@drawable/tab_selected"
+            android:layout_weight="1"
+            android:text="Apps" />
+
+        <Button
+            android:id="@+id/webhooksTabButton"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/tab_normal"
+            android:layout_weight="1"
+            android:text="Webhooks" />
+
+        <Button
+            android:id="@+id/historyTabButton"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/tab_normal"
+            android:layout_weight="1"
+            android:text="History" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/projectWebhookSection"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:visibility="gone">
 
-    <Button
-        android:id="@+id/saveAppsButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Save Apps" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Selected webhooks"
+            android:textColor="#111827"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Choose which global webhooks this project sends to."
+            android:textColor="#64748B"
+            android:textSize="14sp" />
+
+        <Button
+            android:id="@+id/openWebhookSettingsButton"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/button_secondary"
+            android:text="Open Webhook Settings"
+            android:textAllCaps="false" />
+
+        <ListView
+            android:id="@+id/projectWebhookListView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="12dp"
+            android:layout_weight="1" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/appsSection"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <EditText
+            android:id="@+id/searchAppsEditText"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/input_background"
+            android:gravity="center_vertical"
+            android:hint="Search apps"
+            android:imeOptions="actionSearch"
+            android:inputType="text"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:singleLine="true"
+            android:textSize="18sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/enableNotificationsButton"
+                android:layout_width="0dp"
+                android:layout_height="56dp"
+                android:background="@drawable/button_secondary"
+                android:layout_weight="1"
+                android:text="Enable Listener" />
+
+            <Button
+                android:id="@+id/enableSmsButton"
+                android:layout_width="0dp"
+                android:layout_height="56dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/button_secondary"
+                android:layout_weight="1"
+                android:text="Enable SMS" />
+        </LinearLayout>
+
+        <ListView
+            android:id="@+id/appList"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp"
+            android:layout_weight="1" />
+
+        <Button
+            android:id="@+id/saveAppsButton"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="@drawable/button_primary"
+            android:textColor="#FFFFFF"
+            android:text="Save Apps" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/webhooksSection"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <EditText
+            android:id="@+id/webhookUrlEditText"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/input_background"
+            android:gravity="center_vertical"
+            android:hint="Webhook URL"
+            android:inputType="textUri"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:singleLine="true"
+            android:textSize="18sp" />
+
+        <Spinner
+            android:id="@+id/webhookMethodSpinner"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="8dp" />
+
+        <CheckBox
+            android:id="@+id/basicAuthCheckBox"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="Use Basic Auth" />
+
+        <EditText
+            android:id="@+id/basicAuthUsernameEditText"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="@drawable/input_background"
+            android:gravity="center_vertical"
+            android:hint="Username"
+            android:inputType="text"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:singleLine="true"
+            android:textSize="16sp"
+            android:visibility="gone" />
+
+        <EditText
+            android:id="@+id/basicAuthPasswordEditText"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/input_background"
+            android:gravity="center_vertical"
+            android:hint="Password"
+            android:inputType="textPassword"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:singleLine="true"
+            android:textSize="16sp"
+            android:visibility="gone" />
+
+        <CheckBox
+            android:id="@+id/hmacCheckBox"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="Use HMAC SHA-256" />
+
+        <EditText
+            android:id="@+id/hmacSecretEditText"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="@drawable/input_background"
+            android:gravity="center_vertical"
+            android:hint="HMAC Secret"
+            android:inputType="textPassword"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:singleLine="true"
+            android:textSize="16sp"
+            android:visibility="gone" />
+
+        <EditText
+            android:id="@+id/hmacHeaderEditText"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/input_background"
+            android:gravity="center_vertical"
+            android:hint="HMAC Header (X-Signature)"
+            android:inputType="text"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:singleLine="true"
+            android:textSize="16sp"
+            android:visibility="gone" />
+
+        <EditText
+            android:id="@+id/customHeadersEditText"
+            android:layout_width="match_parent"
+            android:layout_height="72dp"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/input_background"
+            android:gravity="top"
+            android:hint="Headers: X-Key=value, one per line"
+            android:inputType="textMultiLine"
+            android:paddingStart="16dp"
+            android:paddingTop="10dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="10dp"
+            android:textSize="14sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/addWebhookButton"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:background="@drawable/button_secondary"
+                android:layout_weight="1"
+                android:text="Add" />
+
+            <Button
+                android:id="@+id/updateWebhookButton"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/button_secondary"
+                android:layout_weight="1"
+                android:text="Update" />
+
+            <Button
+                android:id="@+id/deleteWebhookButton"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/button_secondary"
+                android:layout_weight="1"
+                android:text="Delete" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/testWebhookButton"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/button_primary"
+            android:textColor="#FFFFFF"
+            android:text="Send Test" />
+
+        <ListView
+            android:id="@+id/webhookListView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="12dp"
+            android:layout_weight="1" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/historySection"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <Button
+            android:id="@+id/clearHistoryButton"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/button_secondary"
+            android:text="Clear History" />
+
+        <EditText
+            android:id="@+id/historySearchEditText"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/input_background"
+            android:gravity="center_vertical"
+            android:hint="Search history"
+            android:inputType="text"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:singleLine="true"
+            android:textSize="16sp" />
+
+        <Spinner
+            android:id="@+id/historyFilterSpinner"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="8dp" />
+
+        <ListView
+            android:id="@+id/historyListView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="12dp"
+            android:layout_weight="1" />
+    </LinearLayout>
+
+    </LinearLayout>
 
 </LinearLayout>
