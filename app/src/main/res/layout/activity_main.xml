@@ -780,6 +780,17 @@
                 android:text="Save Settings"
                 android:textColor="#FFFFFF"
                 android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/testSmsForwardButton"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/button_secondary"
+                android:gravity="center"
+                android:text="Send Test SMS"
+                android:textColor="#111827"
+                android:textSize="14sp" />
         </LinearLayout>
     </LinearLayout>
 

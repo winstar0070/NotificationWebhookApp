@@ -375,6 +375,7 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.openListenerSettingsButton).setOnClickListener(v -> checkNotificationListenerEnabled());
         findViewById(R.id.requestSmsPermissionsButton).setOnClickListener(v -> requestSmsPermission());
         findViewById(R.id.saveSettingsButton).setOnClickListener(v -> saveSettings());
+        findViewById(R.id.testSmsForwardButton).setOnClickListener(v -> sendTestSmsForward());
 
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         smsWebhookCheckBox.setChecked(prefs.getBoolean(SMS_TO_WEBHOOK_KEY, true));
@@ -1104,8 +1105,11 @@ public class MainActivity extends AppCompatActivity {
                     == PackageManager.PERMISSION_GRANTED;
             boolean sendGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
                     == PackageManager.PERMISSION_GRANTED;
+            String lastStatus = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                    .getString(SmsForwardStatusReceiver.LAST_STATUS_KEY, "");
             smsStatusText.setText("Receive SMS: " + (receiveGranted ? "granted" : "missing")
-                    + "  /  Send SMS: " + (sendGranted ? "granted" : "missing"));
+                    + "  /  Send SMS: " + (sendGranted ? "granted" : "missing")
+                    + (lastStatus.isEmpty() ? "" : "\nLast forward: " + lastStatus));
         }
     }
 
@@ -1125,6 +1129,24 @@ public class MainActivity extends AppCompatActivity {
                 .apply();
         refreshSettingsStatus();
         Toast.makeText(this, "Settings saved", Toast.LENGTH_SHORT).show();
+    }
+
+    private void sendTestSmsForward() {
+        String forwardNumber = smsForwardNumberEditText.getText() == null
+                ? ""
+                : smsForwardNumberEditText.getText().toString().trim();
+        if (forwardNumber.isEmpty()) {
+            Toast.makeText(this, "Forward phone number required", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (!hasSmsPermissions()) {
+            requestSmsPermission();
+            Toast.makeText(this, "SMS permissions required", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        boolean queued = SmsForwarder.forward(this, forwardNumber, "NotificationWebhookApp", "Test SMS forwarding message");
+        refreshSettingsStatus();
+        Toast.makeText(this, queued ? "Test SMS queued" : "Test SMS failed", Toast.LENGTH_SHORT).show();
     }
 
     private void requestSmsPermission() {

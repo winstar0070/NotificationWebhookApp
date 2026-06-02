@@ -47,6 +47,10 @@
             </intent-filter>
         </receiver>
 
+        <receiver
+            android:name=".SmsForwardStatusReceiver"
+            android:exported="false" />
+
     </application>
 
 </manifest>

@@ -1,13 +1,10 @@
 package com.example.notificationwebhookapp;
 
-import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
 import android.provider.Telephony;
-import android.telephony.SmsManager;
 import android.telephony.SmsMessage;
 import android.util.Log;
 
@@ -62,15 +59,6 @@ public class SmsReceiver extends BroadcastReceiver {
             Log.w(TAG, "SMS forwarding skipped: target number is empty");
             return;
         }
-        if (context.checkSelfPermission(Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
-            Log.w(TAG, "SMS forwarding skipped: SEND_SMS permission missing");
-            return;
-        }
-        String body = "From " + (sender == null ? "" : sender) + ": " + message;
-        SmsManager smsManager = SmsManager.getDefault();
-        for (String part : smsManager.divideMessage(body)) {
-            smsManager.sendTextMessage(targetNumber.trim(), null, part, null, null);
-        }
-        Log.d(TAG, "SMS forwarded");
+        SmsForwarder.forward(context, targetNumber, sender, message);
     }
 }
