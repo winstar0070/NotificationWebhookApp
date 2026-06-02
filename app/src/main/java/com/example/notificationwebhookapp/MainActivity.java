@@ -99,7 +99,7 @@ public class MainActivity extends AppCompatActivity {
     private ListView appListView;
     private EditText smsSourceSenderEditText;
     private EditText smsSourceContainsEditText;
-    private TextView smsSourceRulesText;
+    private LinearLayout smsSourceRulesContainer;
     private EditText smsDestinationEditText;
     private TextView listenerStatusText;
     private TextView smsStatusText;
@@ -360,7 +360,7 @@ public class MainActivity extends AppCompatActivity {
         emptyAppsText = findViewById(R.id.emptyAppsText);
         smsSourceSenderEditText = findViewById(R.id.smsSourceSenderEditText);
         smsSourceContainsEditText = findViewById(R.id.smsSourceContainsEditText);
-        smsSourceRulesText = findViewById(R.id.smsSourceRulesText);
+        smsSourceRulesContainer = findViewById(R.id.smsSourceRulesContainer);
         installedApps = getInstalledApps();
         visibleApps = new ArrayList<>(installedApps);
         appAdapter = new AppListAdapter(this, visibleApps);
@@ -1009,35 +1009,135 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void refreshSmsSourceRulesText() {
-        if (smsSourceRulesText == null) {
+        if (smsSourceRulesContainer == null) {
             return;
         }
+        smsSourceRulesContainer.removeAllViews();
         if (activeProject == null) {
-            smsSourceRulesText.setText("Open a project to manage SMS source rules.");
+            smsSourceRulesContainer.addView(smsSourceEmptyView("Open a project to manage SMS source rules."));
             return;
         }
 
-        StringBuilder builder = new StringBuilder();
         int count = 0;
-        for (RedirectSource source : activeProject.sources) {
+        for (int i = 0; i < activeProject.sources.size(); i++) {
+            RedirectSource source = activeProject.sources.get(i);
             if (source == null || !RedirectSource.TYPE_SMS.equals(source.type)) {
                 continue;
             }
             count++;
-            if (builder.length() > 0) {
-                builder.append('\n');
-            }
-            builder.append(count)
-                    .append(". ")
-                    .append(source.enabled ? "Enabled" : "Disabled")
-                    .append("  sender: ")
-                    .append(source.sender == null || source.sender.isEmpty() ? "-" : source.sender);
+            final int sourceIndex = i;
+            TextView item = new TextView(this);
+            item.setBackground(ContextCompat.getDrawable(this, R.drawable.card_background));
+            item.setTextColor(Color.rgb(17, 24, 39));
+            item.setTextSize(13);
+            item.setPadding(dp(12), dp(10), dp(12), dp(10));
+            item.setText(smsSourceRuleLabel(count, source));
+            item.setOnClickListener(v -> showSmsSourceRuleDialog(sourceIndex));
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+            );
+            params.setMargins(0, count == 1 ? 0 : dp(6), 0, 0);
+            smsSourceRulesContainer.addView(item, params);
+        }
+
+        if (count == 0) {
+            smsSourceRulesContainer.addView(smsSourceEmptyView("No SMS source rules yet."));
+        }
+    }
+
+    private TextView smsSourceEmptyView(String text) {
+        TextView view = new TextView(this);
+        view.setBackground(ContextCompat.getDrawable(this, R.drawable.card_background));
+        view.setPadding(dp(12), dp(10), dp(12), dp(10));
+        view.setText(text);
+        view.setTextColor(Color.rgb(71, 85, 105));
+        view.setTextSize(13);
+        return view;
+    }
+
+    private String smsSourceRuleLabel(int displayIndex, RedirectSource source) {
+        StringBuilder builder = new StringBuilder();
+        builder.append(displayIndex)
+                .append(". ")
+                .append(source.enabled ? "Enabled" : "Disabled")
+                .append("  sender: ")
+                .append(source.sender == null || source.sender.isEmpty() ? "-" : source.sender);
             if (source.containsText != null && !source.containsText.isEmpty()) {
                 builder.append("  contains: ").append(source.containsText);
             }
+        builder.append("\nTap to edit or delete");
+        return builder.toString();
+    }
+
+    private void showSmsSourceRuleDialog(int sourceIndex) {
+        if (activeProject == null || sourceIndex < 0 || sourceIndex >= activeProject.sources.size()) {
+            return;
+        }
+        RedirectSource source = activeProject.sources.get(sourceIndex);
+        if (source == null || !RedirectSource.TYPE_SMS.equals(source.type)) {
+            return;
         }
 
-        smsSourceRulesText.setText(count == 0 ? "No SMS source rules yet." : builder.toString());
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(dp(20), dp(8), dp(20), 0);
+
+        EditText senderInput = new EditText(this);
+        senderInput.setHint("SMS source sender or phone");
+        senderInput.setSingleLine(true);
+        senderInput.setText(source.sender);
+        content.addView(senderInput, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        ));
+
+        EditText containsInput = new EditText(this);
+        containsInput.setHint("Optional body contains keyword");
+        containsInput.setSingleLine(true);
+        containsInput.setText(source.containsText);
+        LinearLayout.LayoutParams inputParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+        inputParams.setMargins(0, dp(8), 0, 0);
+        content.addView(containsInput, inputParams);
+
+        CheckBox enabledInput = new CheckBox(this);
+        enabledInput.setText("Enabled");
+        enabledInput.setChecked(source.enabled);
+        content.addView(enabledInput, inputParams);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("SMS Source Rule")
+                .setView(content)
+                .setPositiveButton("Save", null)
+                .setNegativeButton("Delete", null)
+                .setNeutralButton("Cancel", null)
+                .create();
+        dialog.setOnShowListener(d -> {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                String sender = senderInput.getText() == null ? "" : senderInput.getText().toString().trim();
+                String contains = containsInput.getText() == null ? "" : containsInput.getText().toString().trim();
+                if (sender.isEmpty()) {
+                    Toast.makeText(this, "SMS sender required", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                List<RedirectSource> sources = new ArrayList<>(activeProject.sources);
+                sources.set(sourceIndex, RedirectSource.sms(sender, contains, enabledInput.isChecked()));
+                saveActiveProject(activeProject.selectedWebhookUrls, sources, activeProject.destinations);
+                Toast.makeText(this, "SMS source rule updated", Toast.LENGTH_SHORT).show();
+                dialog.dismiss();
+            });
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener(v -> {
+                List<RedirectSource> sources = new ArrayList<>(activeProject.sources);
+                sources.remove(sourceIndex);
+                saveActiveProject(activeProject.selectedWebhookUrls, sources, activeProject.destinations);
+                Toast.makeText(this, "SMS source rule deleted", Toast.LENGTH_SHORT).show();
+                dialog.dismiss();
+            });
+        });
+        dialog.show();
     }
 
     private int selectedAppCount() {
