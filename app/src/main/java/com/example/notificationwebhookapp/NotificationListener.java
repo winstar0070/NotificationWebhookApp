@@ -2,14 +2,19 @@ package com.example.notificationwebhookapp;
 
 import android.app.Notification;
 import android.content.SharedPreferences;
+import android.os.Bundle;
+import android.os.Parcelable;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
 import android.util.Log;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -46,16 +51,28 @@ public class NotificationListener extends NotificationListenerService {
 
             Notification notification = sbn.getNotification();
             if (notification != null && notification.extras != null) {
-                String title = textFromExtra(notification, Notification.EXTRA_TITLE);
+                List<String> messageParts = collectMessageParts(notification);
+                String title = firstNonEmpty(
+                        textFromExtra(notification, Notification.EXTRA_TITLE),
+                        textFromExtra(notification, Notification.EXTRA_TITLE_BIG)
+                );
                 String text = firstNonEmpty(
                         textFromExtra(notification, Notification.EXTRA_BIG_TEXT),
                         textFromExtra(notification, Notification.EXTRA_TEXT),
+                        join(messageParts),
+                        textFromExtra(notification, Notification.EXTRA_SUMMARY_TEXT),
+                        notification.tickerText == null ? "" : notification.tickerText.toString(),
                         textFromExtra(notification, Notification.EXTRA_SUB_TEXT)
                 );
                 String subText = textFromExtra(notification, Notification.EXTRA_SUB_TEXT);
+                JSONArray extraKeys = extraKeys(notification);
+                JSONArray textLines = new JSONArray();
+                for (String part : messageParts) {
+                    textLines.put(part);
+                }
 
                 // Log the notification details
-                Log.d(TAG, "Notification details - Title: " + title + ", Text: " + text);
+                Log.d(TAG, "Notification details - Package: " + packageName + ", Title: " + title + ", Text: " + text + ", ExtraKeys: " + extraKeys);
 
                 JSONObject payload = new JSONObject();
                 try {
@@ -65,6 +82,11 @@ public class NotificationListener extends NotificationListenerService {
                     notificationPayload.put("title", title);
                     notificationPayload.put("message", text);
                     notificationPayload.put("subText", subText);
+                    notificationPayload.put("summaryText", textFromExtra(notification, Notification.EXTRA_SUMMARY_TEXT));
+                    notificationPayload.put("infoText", textFromExtra(notification, Notification.EXTRA_INFO_TEXT));
+                    notificationPayload.put("tickerText", notification.tickerText == null ? "" : notification.tickerText.toString());
+                    notificationPayload.put("textLines", textLines);
+                    notificationPayload.put("extraKeys", extraKeys);
                     notificationPayload.put("postTime", sbn.getPostTime());
                     notificationPayload.put("id", sbn.getId());
                     notificationPayload.put("tag", sbn.getTag() == null ? "" : sbn.getTag());
@@ -75,6 +97,7 @@ public class NotificationListener extends NotificationListenerService {
                     payload.put("packageName", packageName);
                     payload.put("title", title);
                     payload.put("message", text);
+                    payload.put("textLines", textLines);
                     payload.put("notification", notificationPayload);
                     payload.put("timestamp", System.currentTimeMillis());
                 } catch (Exception ignored) {
@@ -123,6 +146,74 @@ public class NotificationListener extends NotificationListenerService {
         }
         CharSequence value = notification.extras.getCharSequence(key);
         return value == null ? "" : value.toString();
+    }
+
+    private static List<String> collectMessageParts(Notification notification) {
+        List<String> parts = new ArrayList<>();
+        if (notification == null || notification.extras == null) {
+            return parts;
+        }
+
+        CharSequence[] lines = notification.extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES);
+        if (lines != null) {
+            for (CharSequence line : lines) {
+                addPart(parts, line == null ? "" : line.toString());
+            }
+        }
+
+        Parcelable[] messages = notification.extras.getParcelableArray(Notification.EXTRA_MESSAGES);
+        if (messages != null) {
+            for (Parcelable parcelable : messages) {
+                if (parcelable instanceof Bundle) {
+                    Bundle bundle = (Bundle) parcelable;
+                    CharSequence text = bundle.getCharSequence("text");
+                    addPart(parts, text == null ? "" : text.toString());
+                }
+            }
+        }
+
+        addPart(parts, textFromExtra(notification, "android.text"));
+        addPart(parts, textFromExtra(notification, "android.bigText"));
+        addPart(parts, textFromExtra(notification, "android.summaryText"));
+        return parts;
+    }
+
+    private static JSONArray extraKeys(Notification notification) {
+        JSONArray keys = new JSONArray();
+        if (notification == null || notification.extras == null) {
+            return keys;
+        }
+        for (String key : notification.extras.keySet()) {
+            keys.put(key);
+        }
+        return keys;
+    }
+
+    private static void addPart(List<String> parts, String value) {
+        if (value == null) {
+            return;
+        }
+        String trimmed = value.trim();
+        if (!trimmed.isEmpty() && !parts.contains(trimmed)) {
+            parts.add(trimmed);
+        }
+    }
+
+    private static String join(List<String> parts) {
+        if (parts == null || parts.isEmpty()) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder();
+        for (String part : parts) {
+            if (part == null || part.trim().isEmpty()) {
+                continue;
+            }
+            if (builder.length() > 0) {
+                builder.append("\n");
+            }
+            builder.append(part.trim());
+        }
+        return builder.toString();
     }
 
     private static String firstNonEmpty(String... values) {
