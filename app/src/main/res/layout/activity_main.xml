@@ -791,6 +791,17 @@
                 android:text="Send Test SMS"
                 android:textColor="#111827"
                 android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/settingsFeedbackText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/selected_item_background"
+                android:padding="12dp"
+                android:text="Settings status will appear here."
+                android:textColor="#374151"
+                android:textSize="13sp" />
         </LinearLayout>
     </LinearLayout>
 

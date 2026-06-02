@@ -99,6 +99,7 @@ public class MainActivity extends AppCompatActivity {
     private ListView appListView;
     private TextView listenerStatusText;
     private TextView smsStatusText;
+    private TextView settingsFeedbackText;
     private CheckBox smsWebhookCheckBox;
     private CheckBox smsForwardCheckBox;
     private EditText smsForwardNumberEditText;
@@ -368,6 +369,7 @@ public class MainActivity extends AppCompatActivity {
     private void setupSettingsTab() {
         listenerStatusText = findViewById(R.id.listenerStatusText);
         smsStatusText = findViewById(R.id.smsStatusText);
+        settingsFeedbackText = findViewById(R.id.settingsFeedbackText);
         smsWebhookCheckBox = findViewById(R.id.smsWebhookCheckBox);
         smsForwardCheckBox = findViewById(R.id.smsForwardCheckBox);
         smsForwardNumberEditText = findViewById(R.id.smsForwardNumberEditText);
@@ -1107,11 +1109,11 @@ public class MainActivity extends AppCompatActivity {
                     == PackageManager.PERMISSION_GRANTED;
             boolean sendGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
                     == PackageManager.PERMISSION_GRANTED;
-            String lastStatus = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                    .getString(SmsForwardStatusReceiver.LAST_STATUS_KEY, "");
             smsStatusText.setText("Receive SMS: " + (receiveGranted ? "granted" : "missing")
-                    + "  /  Send SMS: " + (sendGranted ? "granted" : "missing")
-                    + (lastStatus.isEmpty() ? "" : "\nLast forward: " + lastStatus));
+                    + "  /  Send SMS: " + (sendGranted ? "granted" : "missing"));
+        }
+        if (settingsFeedbackText != null) {
+            settingsFeedbackText.setText(settingsFeedbackMessage());
         }
     }
 
@@ -1119,8 +1121,22 @@ public class MainActivity extends AppCompatActivity {
         if (!persistSettings(true)) {
             return;
         }
+        SmsForwardStatusReceiver.recordStatus(this, "Settings saved");
         refreshSettingsStatus();
         Toast.makeText(this, "Settings saved", Toast.LENGTH_SHORT).show();
+    }
+
+    private String settingsFeedbackMessage() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        boolean forwardEnabled = smsForwardCheckBox != null && smsForwardCheckBox.isChecked();
+        String forwardNumber = smsForwardNumberEditText == null || smsForwardNumberEditText.getText() == null
+                ? prefs.getString(SMS_FORWARD_NUMBER_KEY, "")
+                : smsForwardNumberEditText.getText().toString().trim();
+        String lastStatus = prefs.getString(SmsForwardStatusReceiver.LAST_STATUS_KEY, "");
+        String route = forwardEnabled
+                ? "SMS forwarding: on" + (forwardNumber.isEmpty() ? " / target missing" : " / target " + forwardNumber)
+                : "SMS forwarding: off";
+        return lastStatus.isEmpty() ? route : route + "\n" + lastStatus;
     }
 
     private boolean persistSettings(boolean validateForwardNumber) {
@@ -1171,6 +1187,7 @@ public class MainActivity extends AppCompatActivity {
                     SMS_PERMISSION_REQUEST_CODE
             );
         } else {
+            refreshSettingsStatus();
             Toast.makeText(this, "SMS permissions already granted", Toast.LENGTH_SHORT).show();
         }
     }
