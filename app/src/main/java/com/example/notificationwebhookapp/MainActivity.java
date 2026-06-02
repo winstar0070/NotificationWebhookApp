@@ -99,6 +99,7 @@ public class MainActivity extends AppCompatActivity {
     private ListView appListView;
     private EditText smsSourceSenderEditText;
     private EditText smsSourceContainsEditText;
+    private TextView smsSourceRulesText;
     private EditText smsDestinationEditText;
     private TextView listenerStatusText;
     private TextView smsStatusText;
@@ -359,6 +360,7 @@ public class MainActivity extends AppCompatActivity {
         emptyAppsText = findViewById(R.id.emptyAppsText);
         smsSourceSenderEditText = findViewById(R.id.smsSourceSenderEditText);
         smsSourceContainsEditText = findViewById(R.id.smsSourceContainsEditText);
+        smsSourceRulesText = findViewById(R.id.smsSourceRulesText);
         installedApps = getInstalledApps();
         visibleApps = new ArrayList<>(installedApps);
         appAdapter = new AppListAdapter(this, visibleApps);
@@ -834,6 +836,7 @@ public class MainActivity extends AppCompatActivity {
         saveActiveProject(activeProject.selectedWebhookUrls, sources, activeProject.destinations);
         smsSourceSenderEditText.setText("");
         smsSourceContainsEditText.setText("");
+        refreshSmsSourceRulesText();
         Toast.makeText(this, "SMS source rule added", Toast.LENGTH_SHORT).show();
     }
 
@@ -859,6 +862,7 @@ public class MainActivity extends AppCompatActivity {
         WebhookSender.saveProject(this, activeProject);
         refreshProjectList();
         refreshProjectWebhookSelection();
+        refreshSmsSourceRulesText();
     }
 
     private void refreshHistory() {
@@ -959,6 +963,7 @@ public class MainActivity extends AppCompatActivity {
         appsSectionSubtitle.setText(addMode
                 ? "Search the full app list and check every notification source to include."
                 : "Only selected apps can trigger notification webhooks.");
+        refreshSmsSourceRulesText();
         if (addMode) {
             filterVisibleApps(searchAppsEditText.getText() == null ? "" : searchAppsEditText.getText().toString());
         } else {
@@ -1001,6 +1006,38 @@ public class MainActivity extends AppCompatActivity {
         emptyAppsText.setText(appAddMode
                 ? "No apps match this search."
                 : "No selected apps yet. Tap Add Apps to choose notification sources.");
+    }
+
+    private void refreshSmsSourceRulesText() {
+        if (smsSourceRulesText == null) {
+            return;
+        }
+        if (activeProject == null) {
+            smsSourceRulesText.setText("Open a project to manage SMS source rules.");
+            return;
+        }
+
+        StringBuilder builder = new StringBuilder();
+        int count = 0;
+        for (RedirectSource source : activeProject.sources) {
+            if (source == null || !RedirectSource.TYPE_SMS.equals(source.type)) {
+                continue;
+            }
+            count++;
+            if (builder.length() > 0) {
+                builder.append('\n');
+            }
+            builder.append(count)
+                    .append(". ")
+                    .append(source.enabled ? "Enabled" : "Disabled")
+                    .append("  sender: ")
+                    .append(source.sender == null || source.sender.isEmpty() ? "-" : source.sender);
+            if (source.containsText != null && !source.containsText.isEmpty()) {
+                builder.append("  contains: ").append(source.containsText);
+            }
+        }
+
+        smsSourceRulesText.setText(count == 0 ? "No SMS source rules yet." : builder.toString());
     }
 
     private int selectedAppCount() {
