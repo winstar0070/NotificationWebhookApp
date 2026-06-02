@@ -1034,7 +1034,7 @@ public class MainActivity extends AppCompatActivity {
             return new HashSet<>(prefs.getStringSet(projectKey, new HashSet<>()));
         }
 
-        if (project != null && !"Default Project".equals(project.name)) {
+        if (!shouldUseLegacySelectedApps(project)) {
             return new HashSet<>();
         }
 
@@ -1049,6 +1049,17 @@ public class MainActivity extends AppCompatActivity {
             prefs.edit().putStringSet(projectKey, legacySelectedApps).apply();
         }
         return legacySelectedApps;
+    }
+
+    private boolean shouldUseLegacySelectedApps(ProjectConfig project) {
+        if (project == null) {
+            return true;
+        }
+        if ("Default Project".equals(project.name)) {
+            return true;
+        }
+        ProjectConfig active = WebhookSender.loadActiveProject(this);
+        return active != null && project.id.equals(active.id);
     }
 
     private String selectedAppsKey(ProjectConfig project) {
