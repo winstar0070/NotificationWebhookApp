@@ -101,12 +101,10 @@ public class MainActivity extends AppCompatActivity {
     private EditText smsSourceContainsEditText;
     private LinearLayout smsSourceRulesContainer;
     private EditText smsDestinationEditText;
+    private LinearLayout smsDestinationContainer;
     private TextView listenerStatusText;
     private TextView smsStatusText;
     private TextView settingsFeedbackText;
-    private CheckBox smsWebhookCheckBox;
-    private CheckBox smsForwardCheckBox;
-    private EditText smsForwardNumberEditText;
     private EditText searchAppsEditText;
     private TextView saveAppsButton;
     private EditText webhookUrlEditText;
@@ -209,6 +207,7 @@ public class MainActivity extends AppCompatActivity {
         projectWebhookListView.setAdapter(projectWebhookAdapter);
         projectWebhookListView.setOnItemClickListener((parent, view, position, id) -> toggleProjectWebhookSelection(webhooks.get(position)));
         smsDestinationEditText = findViewById(R.id.smsDestinationEditText);
+        smsDestinationContainer = findViewById(R.id.smsDestinationContainer);
         findViewById(R.id.addSmsDestinationButton).setOnClickListener(v -> addSmsDestination());
         findViewById(R.id.addProjectButton).setOnClickListener(v -> addProject());
     }
@@ -376,7 +375,7 @@ public class MainActivity extends AppCompatActivity {
             saveSelectedApps();
             setAppAddMode(false);
             refreshProjectList();
-            Toast.makeText(this, "Apps saved", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Sources saved", Toast.LENGTH_SHORT).show();
         });
 
         loadSavedAppSelections();
@@ -387,24 +386,9 @@ public class MainActivity extends AppCompatActivity {
         listenerStatusText = findViewById(R.id.listenerStatusText);
         smsStatusText = findViewById(R.id.smsStatusText);
         settingsFeedbackText = findViewById(R.id.settingsFeedbackText);
-        smsWebhookCheckBox = findViewById(R.id.smsWebhookCheckBox);
-        smsForwardCheckBox = findViewById(R.id.smsForwardCheckBox);
-        smsForwardNumberEditText = findViewById(R.id.smsForwardNumberEditText);
 
         findViewById(R.id.openListenerSettingsButton).setOnClickListener(v -> checkNotificationListenerEnabled());
         findViewById(R.id.requestSmsPermissionsButton).setOnClickListener(v -> requestSmsPermission());
-        findViewById(R.id.saveSettingsButton).setOnClickListener(v -> saveSettings());
-        findViewById(R.id.testSmsForwardButton).setOnClickListener(v -> sendTestSmsForward());
-
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        smsWebhookCheckBox.setChecked(prefs.getBoolean(SMS_TO_WEBHOOK_KEY, true));
-        smsForwardCheckBox.setChecked(prefs.getBoolean(SMS_FORWARD_ENABLED_KEY, false));
-        smsForwardNumberEditText.setText(prefs.getString(SMS_FORWARD_NUMBER_KEY, ""));
-        smsForwardNumberEditText.setVisibility(smsForwardCheckBox.isChecked() ? View.VISIBLE : View.GONE);
-        smsForwardCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            smsForwardNumberEditText.setVisibility(isChecked ? View.VISIBLE : View.GONE);
-            persistSettings(false);
-        });
         refreshSettingsStatus();
     }
 
@@ -521,6 +505,7 @@ public class MainActivity extends AppCompatActivity {
         if (section == projectWebhookSection) {
             refreshGlobalWebhooks();
             refreshProjectWebhookSelection();
+            refreshSmsDestinations();
         }
     }
 
@@ -854,6 +839,7 @@ public class MainActivity extends AppCompatActivity {
         destinations.add(RedirectDestination.sms(number, true));
         saveActiveProject(activeProject.selectedWebhookUrls, activeProject.sources, destinations);
         smsDestinationEditText.setText("");
+        refreshSmsDestinations();
         Toast.makeText(this, "SMS destination added", Toast.LENGTH_SHORT).show();
     }
 
@@ -863,6 +849,7 @@ public class MainActivity extends AppCompatActivity {
         refreshProjectList();
         refreshProjectWebhookSelection();
         refreshSmsSourceRulesText();
+        refreshSmsDestinations();
     }
 
     private void refreshHistory() {
@@ -958,11 +945,11 @@ public class MainActivity extends AppCompatActivity {
         appAddMode = addMode;
         searchAppsEditText.setVisibility(addMode ? View.VISIBLE : View.GONE);
         saveAppsButton.setVisibility(addMode ? View.VISIBLE : View.GONE);
-        addAppsModeButton.setText(addMode ? "Adding Apps" : "Add Apps");
-        appsSectionTitle.setText(addMode ? "Choose apps" : "Selected apps");
+        addAppsModeButton.setText(addMode ? "Adding Sources" : "Add App Source");
+        appsSectionTitle.setText(addMode ? "Choose app sources" : "Selected sources");
         appsSectionSubtitle.setText(addMode
                 ? "Search the full app list and check every notification source to include."
-                : "Only selected apps can trigger notification webhooks.");
+                : "Only selected sources can trigger project destinations.");
         refreshSmsSourceRulesText();
         if (addMode) {
             filterVisibleApps(searchAppsEditText.getText() == null ? "" : searchAppsEditText.getText().toString());
@@ -1004,8 +991,8 @@ public class MainActivity extends AppCompatActivity {
         appListView.setVisibility(empty ? View.GONE : View.VISIBLE);
         emptyAppsText.setVisibility(empty ? View.VISIBLE : View.GONE);
         emptyAppsText.setText(appAddMode
-                ? "No apps match this search."
-                : "No selected apps yet. Tap Add Apps to choose notification sources.");
+                ? "No sources match this search."
+                : "No selected app sources yet. Tap Add App Source to choose notification sources.");
     }
 
     private void refreshSmsSourceRulesText() {
@@ -1134,6 +1121,126 @@ public class MainActivity extends AppCompatActivity {
                 sources.remove(sourceIndex);
                 saveActiveProject(activeProject.selectedWebhookUrls, sources, activeProject.destinations);
                 Toast.makeText(this, "SMS source rule deleted", Toast.LENGTH_SHORT).show();
+                dialog.dismiss();
+            });
+        });
+        dialog.show();
+    }
+
+    private void refreshSmsDestinations() {
+        if (smsDestinationContainer == null) {
+            return;
+        }
+        smsDestinationContainer.removeAllViews();
+        if (activeProject == null) {
+            smsDestinationContainer.addView(destinationEmptyView("Open a project to manage SMS destinations."));
+            return;
+        }
+
+        int count = 0;
+        for (int i = 0; i < activeProject.destinations.size(); i++) {
+            RedirectDestination destination = activeProject.destinations.get(i);
+            if (destination == null || !RedirectDestination.TYPE_SMS.equals(destination.type)) {
+                continue;
+            }
+            count++;
+            final int destinationIndex = i;
+            TextView item = new TextView(this);
+            item.setBackground(ContextCompat.getDrawable(this, R.drawable.card_background));
+            item.setTextColor(Color.rgb(17, 24, 39));
+            item.setTextSize(13);
+            item.setPadding(dp(12), dp(10), dp(12), dp(10));
+            item.setText(smsDestinationLabel(count, destination));
+            item.setOnClickListener(v -> showSmsDestinationDialog(destinationIndex));
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+            );
+            params.setMargins(0, count == 1 ? 0 : dp(6), 0, 0);
+            smsDestinationContainer.addView(item, params);
+        }
+
+        if (count == 0) {
+            smsDestinationContainer.addView(destinationEmptyView("No SMS destinations yet."));
+        }
+    }
+
+    private TextView destinationEmptyView(String text) {
+        TextView view = new TextView(this);
+        view.setBackground(ContextCompat.getDrawable(this, R.drawable.card_background));
+        view.setPadding(dp(12), dp(10), dp(12), dp(10));
+        view.setText(text);
+        view.setTextColor(Color.rgb(71, 85, 105));
+        view.setTextSize(13);
+        return view;
+    }
+
+    private String smsDestinationLabel(int displayIndex, RedirectDestination destination) {
+        return displayIndex
+                + ". "
+                + (destination.enabled ? "Enabled" : "Disabled")
+                + "  phone: "
+                + (destination.phoneNumber == null || destination.phoneNumber.isEmpty() ? "-" : destination.phoneNumber)
+                + "\nTap to edit or delete";
+    }
+
+    private void showSmsDestinationDialog(int destinationIndex) {
+        if (activeProject == null || destinationIndex < 0 || destinationIndex >= activeProject.destinations.size()) {
+            return;
+        }
+        RedirectDestination destination = activeProject.destinations.get(destinationIndex);
+        if (destination == null || !RedirectDestination.TYPE_SMS.equals(destination.type)) {
+            return;
+        }
+
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(dp(20), dp(8), dp(20), 0);
+
+        EditText phoneInput = new EditText(this);
+        phoneInput.setHint("SMS destination number");
+        phoneInput.setSingleLine(true);
+        phoneInput.setText(destination.phoneNumber);
+        content.addView(phoneInput, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        ));
+
+        CheckBox enabledInput = new CheckBox(this);
+        enabledInput.setText("Enabled");
+        enabledInput.setChecked(destination.enabled);
+        LinearLayout.LayoutParams checkParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+        checkParams.setMargins(0, dp(8), 0, 0);
+        content.addView(enabledInput, checkParams);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("SMS Destination")
+                .setView(content)
+                .setPositiveButton("Save", null)
+                .setNegativeButton("Delete", null)
+                .setNeutralButton("Cancel", null)
+                .create();
+        dialog.setOnShowListener(d -> {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                String phone = phoneInput.getText() == null ? "" : phoneInput.getText().toString().trim();
+                if (phone.isEmpty()) {
+                    Toast.makeText(this, "SMS destination number required", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                List<RedirectDestination> destinations = new ArrayList<>(activeProject.destinations);
+                destinations.set(destinationIndex, RedirectDestination.sms(phone, enabledInput.isChecked()));
+                saveActiveProject(activeProject.selectedWebhookUrls, activeProject.sources, destinations);
+                Toast.makeText(this, "SMS destination updated", Toast.LENGTH_SHORT).show();
+                dialog.dismiss();
+            });
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener(v -> {
+                List<RedirectDestination> destinations = new ArrayList<>(activeProject.destinations);
+                destinations.remove(destinationIndex);
+                saveActiveProject(activeProject.selectedWebhookUrls, activeProject.sources, destinations);
+                Toast.makeText(this, "SMS destination deleted", Toast.LENGTH_SHORT).show();
                 dialog.dismiss();
             });
         });
@@ -1356,65 +1463,12 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void saveSettings() {
-        if (!persistSettings(true)) {
-            return;
-        }
-        SmsForwardStatusReceiver.recordStatus(this, "Settings saved");
-        refreshSettingsStatus();
-        Toast.makeText(this, "Settings saved", Toast.LENGTH_SHORT).show();
-    }
-
     private String settingsFeedbackMessage() {
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        boolean forwardEnabled = smsForwardCheckBox != null && smsForwardCheckBox.isChecked();
-        String forwardNumber = smsForwardNumberEditText == null || smsForwardNumberEditText.getText() == null
-                ? prefs.getString(SMS_FORWARD_NUMBER_KEY, "")
-                : smsForwardNumberEditText.getText().toString().trim();
         String lastStatus = prefs.getString(SmsForwardStatusReceiver.LAST_STATUS_KEY, "");
-        String route = forwardEnabled
-                ? "SMS forwarding: on" + (forwardNumber.isEmpty() ? " / target missing" : " / target " + forwardNumber)
-                : "SMS forwarding: off";
-        return lastStatus.isEmpty() ? route : route + "\n" + lastStatus;
-    }
-
-    private boolean persistSettings(boolean validateForwardNumber) {
-        String forwardNumber = smsForwardNumberEditText.getText() == null
-                ? ""
-                : smsForwardNumberEditText.getText().toString().trim();
-        if (validateForwardNumber && smsForwardCheckBox.isChecked() && forwardNumber.isEmpty()) {
-            Toast.makeText(this, "Forward phone number required", Toast.LENGTH_SHORT).show();
-            return false;
-        }
-        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                .edit()
-                .putBoolean(SMS_TO_WEBHOOK_KEY, smsWebhookCheckBox.isChecked())
-                .putBoolean(SMS_FORWARD_ENABLED_KEY, smsForwardCheckBox.isChecked())
-                .putString(SMS_FORWARD_NUMBER_KEY, forwardNumber)
-                .apply();
-        return true;
-    }
-
-    private void sendTestSmsForward() {
-        String forwardNumber = smsForwardNumberEditText.getText() == null
-                ? ""
-                : smsForwardNumberEditText.getText().toString().trim();
-        if (forwardNumber.isEmpty()) {
-            Toast.makeText(this, "Forward phone number required", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        if (!hasSmsPermissions()) {
-            requestSmsPermission();
-            Toast.makeText(this, "SMS permissions required", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        smsForwardCheckBox.setChecked(true);
-        if (!persistSettings(true)) {
-            return;
-        }
-        boolean queued = SmsForwarder.forward(this, forwardNumber, "NotificationWebhookApp", "Test SMS forwarding message");
-        refreshSettingsStatus();
-        Toast.makeText(this, queued ? "Test SMS queued" : "Test SMS failed", Toast.LENGTH_SHORT).show();
+        return lastStatus.isEmpty()
+                ? "Routing is configured inside each project under Destinations."
+                : "Routing is configured inside each project under Destinations.\n" + lastStatus;
     }
 
     private void requestSmsPermission() {

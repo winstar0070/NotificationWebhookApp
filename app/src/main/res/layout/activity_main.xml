@@ -174,7 +174,7 @@
             android:paddingStart="6dp"
             android:paddingEnd="6dp"
             android:layout_weight="1"
-            android:text="Apps"
+            android:text="Sources"
             android:textAllCaps="false"
             android:textSize="14sp" />
 
@@ -283,6 +283,13 @@
                 android:textSize="13sp" />
         </LinearLayout>
 
+        <LinearLayout
+            android:id="@+id/smsDestinationContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="vertical" />
+
         <ListView
             android:id="@+id/projectWebhookListView"
             android:layout_width="match_parent"
@@ -327,7 +334,7 @@
             android:layout_marginTop="12dp"
             android:background="@drawable/input_background"
             android:gravity="center_vertical"
-            android:hint="Search apps"
+            android:hint="Search sources"
             android:imeOptions="actionSearch"
             android:inputType="text"
             android:paddingStart="16dp"
@@ -350,7 +357,7 @@
                 android:background="@drawable/button_secondary"
                 android:minHeight="0dp"
                 android:minWidth="0dp"
-                android:text="Add Apps"
+                android:text="Add App Source"
                 android:textAllCaps="false"
                 android:textColor="#111827"
                 android:textSize="14sp" />
@@ -429,7 +436,7 @@
             android:background="@drawable/card_background"
             android:gravity="center"
             android:padding="20dp"
-            android:text="No selected apps yet. Tap Add Apps to choose notification sources."
+            android:text="No selected app sources yet. Tap Add App Source to choose notification sources."
             android:textColor="#64748B"
             android:textSize="14sp"
             android:visibility="gone" />
@@ -794,7 +801,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="SMS Routing"
+                android:text="SMS Permissions"
                 android:textColor="#111827"
                 android:textSize="15sp"
                 android:textStyle="bold" />
@@ -815,65 +822,6 @@
                 android:background="@drawable/button_secondary"
                 android:gravity="center"
                 android:text="Request SMS Permissions"
-                android:textColor="#111827"
-                android:textSize="14sp" />
-
-            <CheckBox
-                android:id="@+id/smsWebhookCheckBox"
-                android:layout_width="match_parent"
-                android:layout_height="44dp"
-                android:layout_marginTop="12dp"
-                android:button="@drawable/checkbox_selector"
-                android:buttonTint="@null"
-                android:gravity="center_vertical"
-                android:text="Send received SMS to webhook"
-                android:textColor="#111827"
-                android:textSize="14sp" />
-
-            <CheckBox
-                android:id="@+id/smsForwardCheckBox"
-                android:layout_width="match_parent"
-                android:layout_height="44dp"
-                android:button="@drawable/checkbox_selector"
-                android:buttonTint="@null"
-                android:gravity="center_vertical"
-                android:text="Forward received SMS to another phone"
-                android:textColor="#111827"
-                android:textSize="14sp" />
-
-            <EditText
-                android:id="@+id/smsForwardNumberEditText"
-                android:layout_width="match_parent"
-                android:layout_height="46dp"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/input_background"
-                android:gravity="center_vertical"
-                android:hint="Forward phone number"
-                android:inputType="phone"
-                android:paddingStart="14dp"
-                android:paddingEnd="14dp"
-                android:singleLine="true"
-                android:textSize="14sp" />
-
-            <TextView
-                android:id="@+id/saveSettingsButton"
-                android:layout_width="match_parent"
-                android:layout_height="44dp"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/button_primary"
-                android:gravity="center"
-                android:text="Save Settings"
-                android:textColor="#FFFFFF"
-                android:textSize="14sp" />
-
-            <TextView
-                android:id="@+id/testSmsForwardButton"
-                android:layout_width="match_parent"
-                android:layout_height="44dp"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/button_secondary"
-                android:gravity="center"
-                android:text="Send Test SMS"
                 android:textColor="#111827"
                 android:textSize="14sp" />
 
