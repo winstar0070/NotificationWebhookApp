@@ -2,6 +2,7 @@ package com.example.notificationwebhookapp;
 
 import android.Manifest;
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.ComponentName;
@@ -21,18 +22,21 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
-import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -55,6 +59,9 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
     private static final String PREFS_NAME = "NotificationWebhookPrefs";
     private static final String SELECTED_APPS_KEY = "SelectedApps";
+    private static final String SMS_TO_WEBHOOK_KEY = "SmsToWebhook";
+    private static final String SMS_FORWARD_ENABLED_KEY = "SmsForwardEnabled";
+    private static final String SMS_FORWARD_NUMBER_KEY = "SmsForwardNumber";
     private static final String CHANNEL_ID = "my_channel_id";
     private static final int NOTIFICATION_ID = 1;
     private static final int SMS_PERMISSION_REQUEST_CODE = 2;
@@ -77,25 +84,40 @@ public class MainActivity extends AppCompatActivity {
     private View projectWebhookSection;
     private View webhooksSection;
     private View historySection;
+    private View settingsSection;
     private View projectListSection;
     private View projectDetailSection;
     private TextView currentProjectTitle;
     private EditText projectNameEditText;
-    private Button appsTabButton;
-    private Button webhooksTabButton;
-    private Button historyTabButton;
+    private TextView appsTabButton;
+    private TextView webhooksTabButton;
+    private TextView historyTabButton;
+    private TextView appsSectionTitle;
+    private TextView appsSectionSubtitle;
+    private TextView addAppsModeButton;
+    private TextView emptyAppsText;
+    private ListView appListView;
+    private TextView listenerStatusText;
+    private TextView smsStatusText;
+    private CheckBox smsWebhookCheckBox;
+    private CheckBox smsForwardCheckBox;
+    private EditText smsForwardNumberEditText;
+    private EditText searchAppsEditText;
+    private TextView saveAppsButton;
     private EditText webhookUrlEditText;
-    private Spinner webhookMethodSpinner;
+    private TextView[] methodButtons;
+    private String selectedWebhookMethod = "POST";
     private CheckBox basicAuthCheckBox;
     private EditText basicAuthUsernameEditText;
     private EditText basicAuthPasswordEditText;
     private CheckBox hmacCheckBox;
     private EditText hmacSecretEditText;
     private EditText hmacHeaderEditText;
-    private EditText customHeadersEditText;
+    private LinearLayout headersContainer;
     private EditText historySearchEditText;
     private Spinner historyFilterSpinner;
     private List<WebhookHistoryStore.HistoryItem> allHistoryItems = new ArrayList<>();
+    private boolean appAddMode = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -105,10 +127,26 @@ public class MainActivity extends AppCompatActivity {
 
         bindTabs();
         setupAppsTab();
+        setupSettingsTab();
         setupWebhooksTab();
         setupProjects();
         setupHistoryTab();
+        setupBackNavigation();
         showProjectList();
+    }
+
+    private void setupBackNavigation() {
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (projectDetailSection != null && projectDetailSection.getVisibility() == View.VISIBLE) {
+                    showProjectList();
+                    return;
+                }
+                setEnabled(false);
+                getOnBackPressedDispatcher().onBackPressed();
+            }
+        });
     }
 
     @Override
@@ -132,6 +170,7 @@ public class MainActivity extends AppCompatActivity {
         projectWebhookSection = findViewById(R.id.projectWebhookSection);
         webhooksSection = findViewById(R.id.webhooksSection);
         historySection = findViewById(R.id.historySection);
+        settingsSection = findViewById(R.id.settingsSection);
         appsTabButton = findViewById(R.id.appsTabButton);
         webhooksTabButton = findViewById(R.id.webhooksTabButton);
         historyTabButton = findViewById(R.id.historyTabButton);
@@ -142,9 +181,13 @@ public class MainActivity extends AppCompatActivity {
             refreshHistory();
             showSection(historySection);
         });
+        findViewById(R.id.projectSettingsButton).setOnClickListener(v -> {
+            refreshSettingsStatus();
+            showSection(settingsSection);
+        });
         findViewById(R.id.backToProjectsButton).setOnClickListener(v -> showProjectList());
-        findViewById(R.id.deleteProjectButton).setOnClickListener(v -> deleteActiveProject());
         findViewById(R.id.manageGlobalWebhooksButton).setOnClickListener(v -> openGlobalWebhookManager());
+        findViewById(R.id.manageSettingsButton).setOnClickListener(v -> openSettingsManager());
         findViewById(R.id.openWebhookSettingsButton).setOnClickListener(v -> openGlobalWebhookManager());
     }
 
@@ -164,12 +207,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showProjectList() {
-        projects.clear();
-        projects.addAll(WebhookSender.loadProjects(this));
-        projectAdapter.notifyDataSetChanged();
+        refreshProjectList();
         globalWebhookManagerMode = false;
         projectListSection.setVisibility(View.VISIBLE);
         projectDetailSection.setVisibility(View.GONE);
+    }
+
+    private void refreshProjectList() {
+        projects.clear();
+        projects.addAll(WebhookSender.loadProjects(this));
+        projectAdapter.notifyDataSetChanged();
     }
 
     private void openProject(ProjectConfig project) {
@@ -185,7 +232,6 @@ public class MainActivity extends AppCompatActivity {
         selectedWebhookIndex = -1;
         projectListSection.setVisibility(View.GONE);
         projectDetailSection.setVisibility(View.VISIBLE);
-        findViewById(R.id.deleteProjectButton).setVisibility(View.VISIBLE);
         showSection(appsSection);
     }
 
@@ -199,8 +245,16 @@ public class MainActivity extends AppCompatActivity {
         }
         projectListSection.setVisibility(View.GONE);
         projectDetailSection.setVisibility(View.VISIBLE);
-        findViewById(R.id.deleteProjectButton).setVisibility(View.GONE);
         showSection(webhooksSection);
+    }
+
+    private void openSettingsManager() {
+        globalWebhookManagerMode = true;
+        currentProjectTitle.setText("Settings");
+        refreshSettingsStatus();
+        projectListSection.setVisibility(View.GONE);
+        projectDetailSection.setVisibility(View.VISIBLE);
+        showSection(settingsSection);
     }
 
     private void addProject() {
@@ -222,12 +276,60 @@ public class MainActivity extends AppCompatActivity {
         if (activeProject == null) {
             return;
         }
+        confirmDeleteProject(activeProject);
+    }
+
+    private void showRenameProjectDialog(ProjectConfig project) {
+        if (project == null) {
+            return;
+        }
+        Dialog dialog = new Dialog(this);
+        View content = LayoutInflater.from(this).inflate(R.layout.dialog_project_rename, null, false);
+        EditText input = content.findViewById(R.id.renameProjectEditText);
+        input.setText(project.name);
+        input.setSelectAllOnFocus(true);
+        content.findViewById(R.id.cancelRenameButton).setOnClickListener(v -> dialog.dismiss());
+        content.findViewById(R.id.saveRenameButton).setOnClickListener(v -> {
+            String nextName = input.getText() == null ? "" : input.getText().toString().trim();
+            if (nextName.isEmpty()) {
+                Toast.makeText(this, "Project name required", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            ProjectConfig renamed = new ProjectConfig(project.id, nextName, project.selectedWebhookUrls, true);
+            WebhookSender.saveProject(this, renamed);
+            activeProject = WebhookSender.loadActiveProject(this);
+            if (currentProjectTitle != null && activeProject != null) {
+                currentProjectTitle.setText(activeProject.name);
+            }
+            refreshProjectList();
+            Toast.makeText(this, "Project renamed", Toast.LENGTH_SHORT).show();
+            dialog.dismiss();
+        });
+        dialog.setContentView(content);
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawableResource(android.R.color.transparent);
+        }
+        dialog.show();
+        Window shownWindow = dialog.getWindow();
+        if (shownWindow != null) {
+            shownWindow.setLayout(
+                    getResources().getDisplayMetrics().widthPixels - dp(32),
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+            );
+        }
+    }
+
+    private void confirmDeleteProject(ProjectConfig project) {
+        if (project == null) {
+            return;
+        }
         new AlertDialog.Builder(this)
                 .setTitle("Delete Project")
-                .setMessage("Delete " + activeProject.name + "?")
+                .setMessage("Delete " + project.name + "?")
                 .setNegativeButton("Cancel", null)
                 .setPositiveButton("Delete", (dialog, which) -> {
-                    WebhookSender.deleteProject(this, activeProject.id);
+                    WebhookSender.deleteProject(this, project.id);
                     activeProject = WebhookSender.loadActiveProject(this);
                     Toast.makeText(this, "Project deleted", Toast.LENGTH_SHORT).show();
                     showProjectList();
@@ -236,43 +338,65 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupAppsTab() {
-        ListView appList = findViewById(R.id.appList);
+        appListView = findViewById(R.id.appList);
+        appsSectionTitle = findViewById(R.id.appsSectionTitle);
+        appsSectionSubtitle = findViewById(R.id.appsSectionSubtitle);
+        emptyAppsText = findViewById(R.id.emptyAppsText);
         installedApps = getInstalledApps();
         visibleApps = new ArrayList<>(installedApps);
         appAdapter = new AppListAdapter(this, visibleApps);
-        appList.setAdapter(appAdapter);
+        appListView.setAdapter(appAdapter);
         setupAppSearch();
 
-        Button saveAppsButton = findViewById(R.id.saveAppsButton);
+        addAppsModeButton = findViewById(R.id.addAppsModeButton);
+        addAppsModeButton.setOnClickListener(v -> setAppAddMode(true));
+
+        saveAppsButton = findViewById(R.id.saveAppsButton);
         saveAppsButton.setOnClickListener(v -> {
             saveSelectedApps();
+            setAppAddMode(false);
+            refreshProjectList();
             Toast.makeText(this, "Apps saved", Toast.LENGTH_SHORT).show();
         });
 
-        Button enableNotificationsButton = findViewById(R.id.enableNotificationsButton);
-        enableNotificationsButton.setOnClickListener(v -> checkNotificationListenerEnabled());
-
-        Button enableSmsButton = findViewById(R.id.enableSmsButton);
-        enableSmsButton.setOnClickListener(v -> requestSmsPermission());
-
         loadSavedAppSelections();
+        setAppAddMode(false);
+    }
+
+    private void setupSettingsTab() {
+        listenerStatusText = findViewById(R.id.listenerStatusText);
+        smsStatusText = findViewById(R.id.smsStatusText);
+        smsWebhookCheckBox = findViewById(R.id.smsWebhookCheckBox);
+        smsForwardCheckBox = findViewById(R.id.smsForwardCheckBox);
+        smsForwardNumberEditText = findViewById(R.id.smsForwardNumberEditText);
+
+        findViewById(R.id.openListenerSettingsButton).setOnClickListener(v -> checkNotificationListenerEnabled());
+        findViewById(R.id.requestSmsPermissionsButton).setOnClickListener(v -> requestSmsPermission());
+        findViewById(R.id.saveSettingsButton).setOnClickListener(v -> saveSettings());
+
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        smsWebhookCheckBox.setChecked(prefs.getBoolean(SMS_TO_WEBHOOK_KEY, true));
+        smsForwardCheckBox.setChecked(prefs.getBoolean(SMS_FORWARD_ENABLED_KEY, false));
+        smsForwardNumberEditText.setText(prefs.getString(SMS_FORWARD_NUMBER_KEY, ""));
+        smsForwardNumberEditText.setVisibility(smsForwardCheckBox.isChecked() ? View.VISIBLE : View.GONE);
+        smsForwardCheckBox.setOnCheckedChangeListener((buttonView, isChecked) ->
+                smsForwardNumberEditText.setVisibility(isChecked ? View.VISIBLE : View.GONE));
+        refreshSettingsStatus();
     }
 
     private void setupWebhooksTab() {
         webhookUrlEditText = findViewById(R.id.webhookUrlEditText);
-        webhookMethodSpinner = findViewById(R.id.webhookMethodSpinner);
+        setupWebhookMethodSegments();
         basicAuthCheckBox = findViewById(R.id.basicAuthCheckBox);
         basicAuthUsernameEditText = findViewById(R.id.basicAuthUsernameEditText);
         basicAuthPasswordEditText = findViewById(R.id.basicAuthPasswordEditText);
         hmacCheckBox = findViewById(R.id.hmacCheckBox);
         hmacSecretEditText = findViewById(R.id.hmacSecretEditText);
         hmacHeaderEditText = findViewById(R.id.hmacHeaderEditText);
-        customHeadersEditText = findViewById(R.id.customHeadersEditText);
+        headersContainer = findViewById(R.id.headersContainer);
+        findViewById(R.id.addHeaderButton).setOnClickListener(v -> addHeaderRow("", ""));
+        setHeaderRows("");
         ListView webhookListView = findViewById(R.id.webhookListView);
-
-        ArrayAdapter<String> methodAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, webhookMethods);
-        methodAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        webhookMethodSpinner.setAdapter(methodAdapter);
 
         webhooks = new ArrayList<>(WebhookSender.loadAllWebhookConfigs(this));
         webhookAdapter = new WebhookListAdapter(this, webhooks);
@@ -366,6 +490,7 @@ public class MainActivity extends AppCompatActivity {
         projectWebhookSection.setVisibility(section == projectWebhookSection ? View.VISIBLE : View.GONE);
         webhooksSection.setVisibility(section == webhooksSection ? View.VISIBLE : View.GONE);
         historySection.setVisibility(section == historySection ? View.VISIBLE : View.GONE);
+        settingsSection.setVisibility(section == settingsSection ? View.VISIBLE : View.GONE);
         setTabSelected(appsTabButton, section == appsSection);
         setTabSelected(webhooksTabButton, section == projectWebhookSection || section == webhooksSection);
         setTabSelected(historyTabButton, section == historySection);
@@ -375,7 +500,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void setTabSelected(Button button, boolean selected) {
+    private void setTabSelected(TextView button, boolean selected) {
         button.setEnabled(true);
         button.setTextColor(selected ? Color.WHITE : Color.BLACK);
         button.setBackgroundResource(selected ? R.drawable.tab_selected : R.drawable.tab_normal);
@@ -389,6 +514,37 @@ public class MainActivity extends AppCompatActivity {
     private void setHmacFieldsVisible(boolean visible) {
         hmacSecretEditText.setVisibility(visible ? View.VISIBLE : View.GONE);
         hmacHeaderEditText.setVisibility(visible ? View.VISIBLE : View.GONE);
+    }
+
+    private void setupWebhookMethodSegments() {
+        methodButtons = new TextView[]{
+                findViewById(R.id.methodPostButton),
+                findViewById(R.id.methodPutButton),
+                findViewById(R.id.methodPatchButton),
+                findViewById(R.id.methodGetButton),
+                findViewById(R.id.methodDeleteButton)
+        };
+        for (int i = 0; i < methodButtons.length; i++) {
+            final String method = webhookMethods[i];
+            methodButtons[i].setOnClickListener(v -> setWebhookMethod(method));
+        }
+        setWebhookMethod(selectedWebhookMethod);
+    }
+
+    private void setWebhookMethod(String method) {
+        String normalized = method == null || method.trim().isEmpty() ? "POST" : method.trim().toUpperCase();
+        if (!Arrays.asList(webhookMethods).contains(normalized)) {
+            normalized = "POST";
+        }
+        selectedWebhookMethod = normalized;
+        if (methodButtons == null) {
+            return;
+        }
+        for (int i = 0; i < methodButtons.length; i++) {
+            boolean selected = webhookMethods[i].equals(selectedWebhookMethod);
+            methodButtons[i].setBackgroundResource(selected ? R.drawable.method_segment_selected : R.drawable.method_segment_normal);
+            methodButtons[i].setTextColor(selected ? Color.WHITE : Color.rgb(55, 65, 81));
+        }
     }
 
     private void addWebhook() {
@@ -438,7 +594,7 @@ public class MainActivity extends AppCompatActivity {
         hmacSecretEditText.setText("");
         hmacHeaderEditText.setText("");
         hmacCheckBox.setChecked(false);
-        customHeadersEditText.setText("");
+        setHeaderRows("");
         saveWebhooks();
         webhookAdapter.notifyDataSetChanged();
         Toast.makeText(this, "Webhook deleted", Toast.LENGTH_SHORT).show();
@@ -466,21 +622,20 @@ public class MainActivity extends AppCompatActivity {
     private WebhookConfig readWebhookForm() {
         return new WebhookConfig(
                 webhookUrlEditText.getText().toString(),
-                webhookMethodSpinner.getSelectedItem() == null ? "POST" : webhookMethodSpinner.getSelectedItem().toString(),
+                selectedWebhookMethod,
                 basicAuthCheckBox.isChecked(),
                 basicAuthUsernameEditText.getText().toString(),
                 basicAuthPasswordEditText.getText().toString(),
                 hmacCheckBox.isChecked(),
                 hmacSecretEditText.getText().toString(),
                 hmacHeaderEditText.getText().toString(),
-                customHeadersEditText.getText().toString()
+                collectHeaderRows()
         );
     }
 
     private void fillWebhookForm(WebhookConfig config) {
         webhookUrlEditText.setText(config.url);
-        int methodIndex = Arrays.asList(webhookMethods).indexOf(config.method);
-        webhookMethodSpinner.setSelection(Math.max(methodIndex, 0));
+        setWebhookMethod(config.method);
         basicAuthCheckBox.setChecked(config.authEnabled);
         basicAuthUsernameEditText.setText(config.username);
         basicAuthPasswordEditText.setText(config.password);
@@ -489,7 +644,109 @@ public class MainActivity extends AppCompatActivity {
         hmacSecretEditText.setText(config.hmacSecret);
         hmacHeaderEditText.setText(config.hmacHeader);
         setHmacFieldsVisible(config.hmacEnabled);
-        customHeadersEditText.setText(config.customHeaders);
+        setHeaderRows(config.customHeaders);
+    }
+
+    private void addHeaderRow(String key, String value) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        rowParams.topMargin = dp(8);
+        row.setLayoutParams(rowParams);
+
+        EditText keyEditText = createHeaderEditText("Key", key);
+        EditText valueEditText = createHeaderEditText("Value", value);
+        TextView removeButton = new TextView(this);
+        removeButton.setText("-");
+        removeButton.setTextSize(18);
+        removeButton.setGravity(android.view.Gravity.CENTER);
+        removeButton.setTextColor(Color.parseColor("#DC2626"));
+        removeButton.setBackgroundResource(R.drawable.text_button_subtle);
+        LinearLayout.LayoutParams removeParams = new LinearLayout.LayoutParams(dp(42), dp(42));
+        removeParams.leftMargin = dp(8);
+        removeButton.setLayoutParams(removeParams);
+        removeButton.setOnClickListener(v -> {
+            headersContainer.removeView(row);
+            if (headersContainer.getChildCount() == 0) {
+                addHeaderRow("", "");
+            }
+        });
+
+        row.addView(keyEditText);
+        row.addView(valueEditText);
+        row.addView(removeButton);
+        headersContainer.addView(row);
+    }
+
+    private EditText createHeaderEditText(String hint, String value) {
+        EditText editText = new EditText(this);
+        editText.setHint(hint);
+        editText.setText(value == null ? "" : value);
+        editText.setSingleLine(true);
+        editText.setTextSize(13);
+        editText.setTextColor(Color.parseColor("#111827"));
+        editText.setHintTextColor(Color.parseColor("#9CA3AF"));
+        editText.setBackgroundResource(R.drawable.input_background);
+        editText.setPadding(dp(12), 0, dp(12), 0);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(42), 1);
+        params.rightMargin = dp(8);
+        editText.setLayoutParams(params);
+        return editText;
+    }
+
+    private void setHeaderRows(String customHeaders) {
+        headersContainer.removeAllViews();
+        if (customHeaders != null && !customHeaders.trim().isEmpty()) {
+            String[] lines = customHeaders.split("\\n");
+            for (String line : lines) {
+                String trimmed = line.trim();
+                if (trimmed.isEmpty()) {
+                    continue;
+                }
+                int separator = trimmed.indexOf('=');
+                if (separator > 0) {
+                    addHeaderRow(trimmed.substring(0, separator).trim(), trimmed.substring(separator + 1).trim());
+                } else {
+                    addHeaderRow(trimmed, "");
+                }
+            }
+        }
+        if (headersContainer.getChildCount() == 0) {
+            addHeaderRow("", "");
+        }
+    }
+
+    private String collectHeaderRows() {
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < headersContainer.getChildCount(); i++) {
+            View rowView = headersContainer.getChildAt(i);
+            if (!(rowView instanceof LinearLayout)) {
+                continue;
+            }
+            LinearLayout row = (LinearLayout) rowView;
+            if (row.getChildCount() < 2
+                    || !(row.getChildAt(0) instanceof EditText)
+                    || !(row.getChildAt(1) instanceof EditText)) {
+                continue;
+            }
+            String key = ((EditText) row.getChildAt(0)).getText().toString().trim();
+            String value = ((EditText) row.getChildAt(1)).getText().toString().trim();
+            if (!key.isEmpty() && !value.isEmpty()) {
+                if (builder.length() > 0) {
+                    builder.append('\n');
+                }
+                builder.append(key).append('=').append(value);
+            }
+        }
+        return builder.toString();
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
     private void saveWebhooks() {
@@ -609,7 +866,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupAppSearch() {
-        EditText searchAppsEditText = findViewById(R.id.searchAppsEditText);
+        searchAppsEditText = findViewById(R.id.searchAppsEditText);
         searchAppsEditText.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -617,13 +874,43 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                filterVisibleApps(s == null ? "" : s.toString());
+                if (appAddMode) {
+                    filterVisibleApps(s == null ? "" : s.toString());
+                }
             }
 
             @Override
             public void afterTextChanged(Editable s) {
             }
         });
+    }
+
+    private void setAppAddMode(boolean addMode) {
+        appAddMode = addMode;
+        searchAppsEditText.setVisibility(addMode ? View.VISIBLE : View.GONE);
+        saveAppsButton.setVisibility(addMode ? View.VISIBLE : View.GONE);
+        addAppsModeButton.setText(addMode ? "Adding Apps" : "Add Apps");
+        appsSectionTitle.setText(addMode ? "Choose apps" : "Selected apps");
+        appsSectionSubtitle.setText(addMode
+                ? "Search the full app list and check every notification source to include."
+                : "Only selected apps can trigger notification webhooks.");
+        if (addMode) {
+            filterVisibleApps(searchAppsEditText.getText() == null ? "" : searchAppsEditText.getText().toString());
+        } else {
+            searchAppsEditText.setText("");
+            showSelectedAppsOnly();
+        }
+    }
+
+    private void showSelectedAppsOnly() {
+        visibleApps.clear();
+        for (AppInfo appInfo : installedApps) {
+            if (appInfo.isSelected) {
+                visibleApps.add(appInfo);
+            }
+        }
+        appAdapter.notifyDataSetChanged();
+        updateAppsEmptyState();
     }
 
     private void filterVisibleApps(String query) {
@@ -639,6 +926,30 @@ public class MainActivity extends AppCompatActivity {
         }
 
         appAdapter.notifyDataSetChanged();
+        updateAppsEmptyState();
+    }
+
+    private void updateAppsEmptyState() {
+        boolean empty = visibleApps.isEmpty();
+        appListView.setVisibility(empty ? View.GONE : View.VISIBLE);
+        emptyAppsText.setVisibility(empty ? View.VISIBLE : View.GONE);
+        emptyAppsText.setText(appAddMode
+                ? "No apps match this search."
+                : "No selected apps yet. Tap Add Apps to choose notification sources.");
+    }
+
+    private int selectedAppCount() {
+        if (installedApps != null) {
+            int count = 0;
+            for (AppInfo appInfo : installedApps) {
+                if (appInfo.isSelected) {
+                    count++;
+                }
+            }
+            return count;
+        }
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        return prefs.getStringSet(SELECTED_APPS_KEY, new HashSet<>()).size();
     }
 
     private void handleIntent(Intent intent) {
@@ -745,16 +1056,50 @@ public class MainActivity extends AppCompatActivity {
         return false;
     }
 
+    private void refreshSettingsStatus() {
+        if (listenerStatusText != null) {
+            listenerStatusText.setText(isNotificationServiceEnabled()
+                    ? "Enabled. App notifications can be detected."
+                    : "Disabled. Open listener settings and enable this app.");
+        }
+        if (smsStatusText != null) {
+            boolean receiveGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS)
+                    == PackageManager.PERMISSION_GRANTED;
+            boolean sendGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
+                    == PackageManager.PERMISSION_GRANTED;
+            smsStatusText.setText("Receive SMS: " + (receiveGranted ? "granted" : "missing")
+                    + "  /  Send SMS: " + (sendGranted ? "granted" : "missing"));
+        }
+    }
+
+    private void saveSettings() {
+        String forwardNumber = smsForwardNumberEditText.getText() == null
+                ? ""
+                : smsForwardNumberEditText.getText().toString().trim();
+        if (smsForwardCheckBox.isChecked() && forwardNumber.isEmpty()) {
+            Toast.makeText(this, "Forward phone number required", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .edit()
+                .putBoolean(SMS_TO_WEBHOOK_KEY, smsWebhookCheckBox.isChecked())
+                .putBoolean(SMS_FORWARD_ENABLED_KEY, smsForwardCheckBox.isChecked())
+                .putString(SMS_FORWARD_NUMBER_KEY, forwardNumber)
+                .apply();
+        refreshSettingsStatus();
+        Toast.makeText(this, "Settings saved", Toast.LENGTH_SHORT).show();
+    }
+
     private void requestSmsPermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS)
-                != PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) != PackageManager.PERMISSION_GRANTED
+                || ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(
                     this,
-                    new String[]{Manifest.permission.RECEIVE_SMS},
+                    new String[]{Manifest.permission.RECEIVE_SMS, Manifest.permission.SEND_SMS},
                     SMS_PERMISSION_REQUEST_CODE
             );
         } else {
-            Toast.makeText(this, "SMS permission already granted", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "SMS permissions already granted", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -793,14 +1138,20 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, "Notification permission denied");
             }
         } else if (requestCode == SMS_PERMISSION_REQUEST_CODE) {
+            refreshSettingsStatus();
             Toast.makeText(
                     this,
-                    grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED
-                            ? "SMS permission granted"
-                            : "SMS permission denied",
+                    hasSmsPermissions()
+                            ? "SMS permissions granted"
+                            : "SMS permissions missing",
                     Toast.LENGTH_SHORT
             ).show();
         }
+    }
+
+    private boolean hasSmsPermissions() {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED;
     }
 
     public class AppListAdapter extends BaseAdapter {
@@ -842,6 +1193,7 @@ public class MainActivity extends AppCompatActivity {
             appName.setText(appInfo.name);
             appCheckbox.setOnCheckedChangeListener(null);
             appCheckbox.setChecked(appInfo.isSelected);
+            appCheckbox.setVisibility(appAddMode ? View.VISIBLE : View.GONE);
             appCheckbox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                 @Override
                 public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -886,12 +1238,13 @@ public class MainActivity extends AppCompatActivity {
             WebhookConfig config = getItem(position);
             TextView title = convertView.findViewById(R.id.webhookTitle);
             TextView subtitle = convertView.findViewById(R.id.webhookSubtitle);
-            title.setText((position == selectedWebhookIndex ? "Selected: " : "") + config.method + "  " + config.hostPreview());
+            title.setText(config.method + "  " + config.hostPreview());
             String authText = config.authEnabled ? "Basic Auth" : "No Auth";
             String hmacText = config.hmacEnabled ? "  HMAC" : "";
             String headerText = config.customHeaders.isEmpty() ? "" : "  Headers";
-            subtitle.setText(authText + hmacText + headerText + "  " + config.displayUrl());
-            convertView.setBackgroundResource(position == selectedWebhookIndex ? R.drawable.selected_item_background : android.R.color.transparent);
+            String selectedText = position == selectedWebhookIndex ? "Selected  " : "";
+            subtitle.setText(selectedText + authText + hmacText + headerText + "  " + config.displayUrl());
+            convertView.setBackgroundResource(position == selectedWebhookIndex ? R.drawable.selected_item_background : R.drawable.card_background);
             return convertView;
         }
     }
@@ -930,14 +1283,14 @@ public class MainActivity extends AppCompatActivity {
             boolean selected = activeProject != null && activeProject.selectedWebhookUrls.contains(config.url);
             TextView title = convertView.findViewById(R.id.webhookTitle);
             TextView subtitle = convertView.findViewById(R.id.webhookSubtitle);
-            title.setText((selected ? "[x] " : "[ ] ") + config.method + "  " + config.hostPreview());
-            subtitle.setText((selected ? "Selected for this project  " : "Tap to select  ") + config.displayUrl());
+            title.setText(config.method + "  " + config.hostPreview());
+            subtitle.setText((selected ? "Selected for this project  " : "Available  ") + config.displayUrl());
             convertView.setBackgroundResource(selected ? R.drawable.selected_item_background : R.drawable.card_background);
             return convertView;
         }
     }
 
-    private static class ProjectListAdapter extends BaseAdapter {
+    private class ProjectListAdapter extends BaseAdapter {
         private final Context context;
         private final List<ProjectConfig> items;
 
@@ -969,8 +1322,15 @@ public class MainActivity extends AppCompatActivity {
             ProjectConfig project = getItem(position);
             TextView title = convertView.findViewById(R.id.projectTitle);
             TextView subtitle = convertView.findViewById(R.id.projectSubtitle);
+            ImageButton renameButton = convertView.findViewById(R.id.renameProjectButton);
+            ImageButton deleteButton = convertView.findViewById(R.id.deleteProjectItemButton);
+            ImageButton openButton = convertView.findViewById(R.id.openProjectItemButton);
             title.setText(project.name);
-            subtitle.setText(project.selectedWebhookUrls.size() + " selected webhooks");
+            subtitle.setText(project.selectedWebhookUrls.size() + " selected webhooks + " + selectedAppCount() + " selected apps");
+            renameButton.setOnClickListener(v -> showRenameProjectDialog(project));
+            deleteButton.setOnClickListener(v -> confirmDeleteProject(project));
+            openButton.setOnClickListener(v -> openProject(project));
+            convertView.setOnClickListener(v -> openProject(project));
             return convertView;
         }
     }

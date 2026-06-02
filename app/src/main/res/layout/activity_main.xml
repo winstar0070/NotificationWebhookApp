@@ -3,11 +3,12 @@
     android:id="@+id/mainRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#F6F7F9"
     android:orientation="vertical"
-    android:paddingStart="20dp"
-    android:paddingTop="16dp"
-    android:paddingEnd="20dp"
-    android:paddingBottom="16dp">
+    android:paddingStart="16dp"
+    android:paddingTop="14dp"
+    android:paddingEnd="16dp"
+    android:paddingBottom="14dp">
 
     <LinearLayout
         android:id="@+id/projectListSection"
@@ -19,10 +20,10 @@
             android:id="@+id/appTitleText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="8dp"
             android:text="Notification Webhooks"
             android:textColor="#111827"
-            android:textSize="24sp"
+            android:textSize="22sp"
             android:textStyle="bold" />
 
         <TextView
@@ -32,18 +33,18 @@
             android:layout_marginTop="4dp"
             android:text="Choose a project to manage app alerts and webhooks."
             android:textColor="#64748B"
-            android:textSize="14sp" />
+            android:textSize="13sp" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="14dp"
             android:orientation="horizontal">
 
             <EditText
                 android:id="@+id/projectNameEditText"
                 android:layout_width="0dp"
-                android:layout_height="48dp"
+                android:layout_height="44dp"
                 android:layout_weight="1"
                 android:background="@drawable/input_background"
                 android:gravity="center_vertical"
@@ -52,32 +53,58 @@
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
                 android:singleLine="true"
-                android:textSize="16sp" />
+                android:textSize="15sp" />
 
-            <Button
+            <TextView
                 android:id="@+id/addProjectButton"
-                android:layout_width="104dp"
-                android:layout_height="48dp"
+                android:layout_width="92dp"
+                android:layout_height="44dp"
+            android:gravity="center"
                 android:layout_marginStart="8dp"
                 android:background="@drawable/button_primary"
+                android:minHeight="0dp"
+                android:minWidth="0dp"
                 android:text="Add"
+                android:textAllCaps="false"
                 android:textColor="#FFFFFF" />
         </LinearLayout>
 
-        <Button
+        <TextView
             android:id="@+id/manageGlobalWebhooksButton"
             android:layout_width="match_parent"
-            android:layout_height="44dp"
+            android:layout_height="42dp"
+            android:gravity="center"
             android:layout_marginTop="10dp"
             android:background="@drawable/button_secondary"
+            android:minHeight="0dp"
+            android:minWidth="0dp"
             android:text="Manage Webhooks"
-            android:textAllCaps="false" />
+            android:textAllCaps="false"
+            android:textColor="#111827"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/manageSettingsButton"
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:gravity="center"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/button_secondary"
+            android:minHeight="0dp"
+            android:minWidth="0dp"
+            android:text="Settings"
+            android:textAllCaps="false"
+            android:textColor="#111827"
+            android:textSize="14sp" />
 
         <ListView
             android:id="@+id/projectListView"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="14dp"
+            android:cacheColorHint="#00000000"
+            android:divider="@android:color/transparent"
+            android:dividerHeight="8dp"
             android:layout_weight="1" />
     </LinearLayout>
 
@@ -93,24 +120,22 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal">
 
-        <Button
+        <ImageButton
             android:id="@+id/backToProjectsButton"
-            android:layout_width="58dp"
-            android:layout_height="36dp"
-            android:background="@drawable/text_button_subtle"
-            android:minWidth="0dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@android:color/transparent"
+            android:contentDescription="Back to projects"
+            android:padding="8dp"
+            android:scaleType="center"
+            android:src="@drawable/ic_arrow_left"
             android:minHeight="0dp"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            android:text="Back"
-            android:textAllCaps="false"
-            android:textColor="#374151"
-            android:textSize="13sp" />
+            android:minWidth="0dp" />
 
         <TextView
             android:id="@+id/currentProjectTitle"
             android:layout_width="0dp"
-            android:layout_height="36dp"
+            android:layout_height="40dp"
             android:layout_marginStart="10dp"
             android:layout_marginEnd="10dp"
             android:layout_weight="1"
@@ -119,19 +144,17 @@
             android:textSize="17sp"
             android:textStyle="bold" />
 
-        <Button
-            android:id="@+id/deleteProjectButton"
-            android:layout_width="64dp"
-            android:layout_height="36dp"
-            android:background="@drawable/text_button_subtle"
-            android:minWidth="0dp"
+        <ImageButton
+            android:id="@+id/projectSettingsButton"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@android:color/transparent"
+            android:contentDescription="Project settings"
+            android:padding="8dp"
+            android:scaleType="center"
+            android:src="@drawable/ic_settings"
             android:minHeight="0dp"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            android:text="Delete"
-            android:textAllCaps="false"
-            android:textColor="#991B1B"
-            android:textSize="13sp" />
+            android:minWidth="0dp" />
     </LinearLayout>
 
     <LinearLayout
@@ -140,10 +163,11 @@
         android:layout_marginTop="14dp"
         android:orientation="horizontal">
 
-        <Button
+        <TextView
             android:id="@+id/appsTabButton"
             android:layout_width="0dp"
             android:layout_height="40dp"
+            android:gravity="center"
             android:background="@drawable/tab_selected"
             android:minHeight="0dp"
             android:minWidth="0dp"
@@ -154,10 +178,11 @@
             android:textAllCaps="false"
             android:textSize="14sp" />
 
-        <Button
+        <TextView
             android:id="@+id/webhooksTabButton"
             android:layout_width="0dp"
             android:layout_height="40dp"
+            android:gravity="center"
             android:layout_marginStart="8dp"
             android:background="@drawable/tab_normal"
             android:minHeight="0dp"
@@ -169,10 +194,11 @@
             android:textAllCaps="false"
             android:textSize="14sp" />
 
-        <Button
+        <TextView
             android:id="@+id/historyTabButton"
             android:layout_width="0dp"
             android:layout_height="40dp"
+            android:gravity="center"
             android:layout_marginStart="8dp"
             android:background="@drawable/tab_normal"
             android:minHeight="0dp"
@@ -183,6 +209,7 @@
             android:text="History"
             android:textAllCaps="false"
             android:textSize="14sp" />
+
     </LinearLayout>
 
     <LinearLayout
@@ -210,20 +237,28 @@
             android:textColor="#64748B"
             android:textSize="14sp" />
 
-        <Button
+        <TextView
             android:id="@+id/openWebhookSettingsButton"
             android:layout_width="match_parent"
-            android:layout_height="44dp"
+            android:layout_height="42dp"
+            android:gravity="center"
             android:layout_marginTop="12dp"
             android:background="@drawable/button_secondary"
+            android:minHeight="0dp"
+            android:minWidth="0dp"
             android:text="Open Webhook Settings"
-            android:textAllCaps="false" />
+            android:textAllCaps="false"
+            android:textColor="#111827"
+            android:textSize="14sp" />
 
         <ListView
             android:id="@+id/projectWebhookListView"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_marginTop="12dp"
+            android:cacheColorHint="#00000000"
+            android:divider="@android:color/transparent"
+            android:dividerHeight="8dp"
             android:layout_weight="1" />
     </LinearLayout>
 
@@ -234,11 +269,30 @@
         android:layout_weight="1"
         android:orientation="vertical">
 
+        <TextView
+            android:id="@+id/appsSectionTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Selected apps"
+            android:textColor="#111827"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/appsSectionSubtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Only selected apps can trigger notification webhooks."
+            android:textColor="#64748B"
+            android:textSize="13sp" />
+
         <EditText
             android:id="@+id/searchAppsEditText"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:layout_marginTop="16dp"
+            android:layout_height="48dp"
+            android:layout_marginTop="12dp"
             android:background="@drawable/input_background"
             android:gravity="center_vertical"
             android:hint="Search apps"
@@ -247,7 +301,8 @@
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
             android:singleLine="true"
-            android:textSize="18sp" />
+            android:textSize="16sp"
+            android:visibility="gone" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -255,22 +310,18 @@
             android:layout_marginTop="12dp"
             android:orientation="horizontal">
 
-            <Button
-                android:id="@+id/enableNotificationsButton"
-                android:layout_width="0dp"
-                android:layout_height="56dp"
+            <TextView
+                android:id="@+id/addAppsModeButton"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:gravity="center"
                 android:background="@drawable/button_secondary"
-                android:layout_weight="1"
-                android:text="Enable Listener" />
-
-            <Button
-                android:id="@+id/enableSmsButton"
-                android:layout_width="0dp"
-                android:layout_height="56dp"
-                android:layout_marginStart="8dp"
-                android:background="@drawable/button_secondary"
-                android:layout_weight="1"
-                android:text="Enable SMS" />
+                android:minHeight="0dp"
+                android:minWidth="0dp"
+                android:text="Add Apps"
+                android:textAllCaps="false"
+                android:textColor="#111827"
+                android:textSize="14sp" />
         </LinearLayout>
 
         <ListView
@@ -279,15 +330,37 @@
             android:layout_height="0dp"
             android:layout_marginTop="16dp"
             android:layout_marginBottom="16dp"
+            android:cacheColorHint="#00000000"
+            android:divider="@android:color/transparent"
+            android:dividerHeight="6dp"
             android:layout_weight="1" />
 
-        <Button
+        <TextView
+            android:id="@+id/emptyAppsText"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="16dp"
+            android:layout_weight="1"
+            android:background="@drawable/card_background"
+            android:gravity="center"
+            android:padding="20dp"
+            android:text="No selected apps yet. Tap Add Apps to choose notification sources."
+            android:textColor="#64748B"
+            android:textSize="14sp"
+            android:visibility="gone" />
+
+        <TextView
             android:id="@+id/saveAppsButton"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="46dp"
+            android:gravity="center"
             android:background="@drawable/button_primary"
+            android:minHeight="0dp"
+            android:minWidth="0dp"
             android:textColor="#FFFFFF"
-            android:text="Save Apps" />
+            android:text="Done"
+            android:textAllCaps="false"
+            android:textSize="15sp" />
     </LinearLayout>
 
     <LinearLayout
@@ -301,7 +374,7 @@
         <EditText
             android:id="@+id/webhookUrlEditText"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
+            android:layout_height="48dp"
             android:layout_marginTop="16dp"
             android:background="@drawable/input_background"
             android:gravity="center_vertical"
@@ -310,24 +383,93 @@
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
             android:singleLine="true"
-            android:textSize="18sp" />
+            android:textSize="15sp" />
 
-        <Spinner
-            android:id="@+id/webhookMethodSpinner"
+        <LinearLayout
+            android:id="@+id/webhookMethodSegment"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginTop="8dp" />
+            android:layout_height="44dp"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/methodPostButton"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/method_segment_selected"
+                android:gravity="center"
+                android:text="POST"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/methodPutButton"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/method_segment_normal"
+                android:gravity="center"
+                android:text="PUT"
+                android:textColor="#374151"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/methodPatchButton"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/method_segment_normal"
+                android:gravity="center"
+                android:text="PATCH"
+                android:textColor="#374151"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/methodGetButton"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/method_segment_normal"
+                android:gravity="center"
+                android:text="GET"
+                android:textColor="#374151"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/methodDeleteButton"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/method_segment_normal"
+                android:gravity="center"
+                android:text="DEL"
+                android:textColor="#374151"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </LinearLayout>
 
         <CheckBox
             android:id="@+id/basicAuthCheckBox"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="42dp"
+            android:button="@drawable/checkbox_selector"
+            android:buttonTint="@null"
+            android:paddingStart="8dp"
             android:text="Use Basic Auth" />
 
         <EditText
             android:id="@+id/basicAuthUsernameEditText"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="44dp"
             android:background="@drawable/input_background"
             android:gravity="center_vertical"
             android:hint="Username"
@@ -341,7 +483,7 @@
         <EditText
             android:id="@+id/basicAuthPasswordEditText"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="44dp"
             android:layout_marginTop="8dp"
             android:background="@drawable/input_background"
             android:gravity="center_vertical"
@@ -356,13 +498,16 @@
         <CheckBox
             android:id="@+id/hmacCheckBox"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="42dp"
+            android:button="@drawable/checkbox_selector"
+            android:buttonTint="@null"
+            android:paddingStart="8dp"
             android:text="Use HMAC SHA-256" />
 
         <EditText
             android:id="@+id/hmacSecretEditText"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="44dp"
             android:background="@drawable/input_background"
             android:gravity="center_vertical"
             android:hint="HMAC Secret"
@@ -376,7 +521,7 @@
         <EditText
             android:id="@+id/hmacHeaderEditText"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="44dp"
             android:layout_marginTop="8dp"
             android:background="@drawable/input_background"
             android:gravity="center_vertical"
@@ -388,19 +533,32 @@
             android:textSize="16sp"
             android:visibility="gone" />
 
-        <EditText
-            android:id="@+id/customHeadersEditText"
+        <TextView
             android:layout_width="match_parent"
-            android:layout_height="72dp"
+            android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:background="@drawable/input_background"
-            android:gravity="top"
-            android:hint="Headers: X-Key=value, one per line"
-            android:inputType="textMultiLine"
-            android:paddingStart="16dp"
-            android:paddingTop="10dp"
-            android:paddingEnd="16dp"
-            android:paddingBottom="10dp"
+            android:text="Headers"
+            android:textColor="#111827"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:id="@+id/headersContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:orientation="vertical" />
+
+        <TextView
+            android:id="@+id/addHeaderButton"
+            android:layout_width="match_parent"
+            android:layout_height="38dp"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/button_secondary"
+            android:gravity="center"
+            android:text="+ Header"
+            android:textAllCaps="false"
+            android:textColor="#111827"
             android:textSize="14sp" />
 
         <LinearLayout
@@ -409,48 +567,220 @@
             android:layout_marginTop="8dp"
             android:orientation="horizontal">
 
-            <Button
+            <TextView
                 android:id="@+id/addWebhookButton"
                 android:layout_width="0dp"
-                android:layout_height="48dp"
+                android:layout_height="42dp"
+            android:gravity="center"
                 android:background="@drawable/button_secondary"
                 android:layout_weight="1"
-                android:text="Add" />
+                android:minHeight="0dp"
+                android:minWidth="0dp"
+                android:text="Add"
+                android:textAllCaps="false"
+                android:textColor="#111827"
+                android:textSize="14sp" />
 
-            <Button
+            <TextView
                 android:id="@+id/updateWebhookButton"
                 android:layout_width="0dp"
-                android:layout_height="48dp"
+                android:layout_height="42dp"
+            android:gravity="center"
                 android:layout_marginStart="8dp"
                 android:background="@drawable/button_secondary"
                 android:layout_weight="1"
-                android:text="Update" />
+                android:minHeight="0dp"
+                android:minWidth="0dp"
+                android:text="Update"
+                android:textAllCaps="false"
+                android:textColor="#111827"
+                android:textSize="14sp" />
 
-            <Button
+            <TextView
                 android:id="@+id/deleteWebhookButton"
                 android:layout_width="0dp"
-                android:layout_height="48dp"
+                android:layout_height="42dp"
+            android:gravity="center"
                 android:layout_marginStart="8dp"
                 android:background="@drawable/button_secondary"
                 android:layout_weight="1"
-                android:text="Delete" />
+                android:minHeight="0dp"
+                android:minWidth="0dp"
+                android:text="Delete"
+                android:textAllCaps="false"
+                android:textColor="#991B1B"
+                android:textSize="14sp" />
         </LinearLayout>
 
-        <Button
+        <TextView
             android:id="@+id/testWebhookButton"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="44dp"
+            android:gravity="center"
             android:layout_marginTop="8dp"
             android:background="@drawable/button_primary"
+            android:minHeight="0dp"
+            android:minWidth="0dp"
             android:textColor="#FFFFFF"
-            android:text="Send Test" />
+            android:text="Send Test"
+            android:textAllCaps="false"
+            android:textSize="15sp" />
 
         <ListView
             android:id="@+id/webhookListView"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_marginTop="12dp"
+            android:cacheColorHint="#00000000"
+            android:divider="@android:color/transparent"
+            android:dividerHeight="8dp"
             android:layout_weight="1" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/settingsSection"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Settings"
+            android:textColor="#111827"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Manage permissions and SMS routing outside app selection."
+            android:textColor="#64748B"
+            android:textSize="13sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/card_background"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Notification Listener"
+                android:textColor="#111827"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/listenerStatusText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="#64748B"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/openListenerSettingsButton"
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/button_secondary"
+                android:gravity="center"
+                android:text="Open Listener Settings"
+                android:textColor="#111827"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/card_background"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="SMS Routing"
+                android:textColor="#111827"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/smsStatusText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="#64748B"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/requestSmsPermissionsButton"
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/button_secondary"
+                android:gravity="center"
+                android:text="Request SMS Permissions"
+                android:textColor="#111827"
+                android:textSize="14sp" />
+
+            <CheckBox
+                android:id="@+id/smsWebhookCheckBox"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:layout_marginTop="12dp"
+                android:button="@drawable/checkbox_selector"
+                android:buttonTint="@null"
+                android:gravity="center_vertical"
+                android:text="Send received SMS to webhook"
+                android:textColor="#111827"
+                android:textSize="14sp" />
+
+            <CheckBox
+                android:id="@+id/smsForwardCheckBox"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:button="@drawable/checkbox_selector"
+                android:buttonTint="@null"
+                android:gravity="center_vertical"
+                android:text="Forward received SMS to another phone"
+                android:textColor="#111827"
+                android:textSize="14sp" />
+
+            <EditText
+                android:id="@+id/smsForwardNumberEditText"
+                android:layout_width="match_parent"
+                android:layout_height="46dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/input_background"
+                android:gravity="center_vertical"
+                android:hint="Forward phone number"
+                android:inputType="phone"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:singleLine="true"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/saveSettingsButton"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/button_primary"
+                android:gravity="center"
+                android:text="Save Settings"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp" />
+        </LinearLayout>
     </LinearLayout>
 
     <LinearLayout
@@ -461,18 +791,24 @@
         android:orientation="vertical"
         android:visibility="gone">
 
-        <Button
+        <TextView
             android:id="@+id/clearHistoryButton"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="42dp"
+            android:gravity="center"
             android:layout_marginTop="16dp"
             android:background="@drawable/button_secondary"
-            android:text="Clear History" />
+            android:minHeight="0dp"
+            android:minWidth="0dp"
+            android:text="Clear History"
+            android:textAllCaps="false"
+            android:textColor="#991B1B"
+            android:textSize="14sp" />
 
         <EditText
             android:id="@+id/historySearchEditText"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="44dp"
             android:layout_marginTop="8dp"
             android:background="@drawable/input_background"
             android:gravity="center_vertical"
@@ -486,7 +822,7 @@
         <Spinner
             android:id="@+id/historyFilterSpinner"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="44dp"
             android:layout_marginTop="8dp" />
 
         <ListView
@@ -494,6 +830,9 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_marginTop="12dp"
+            android:cacheColorHint="#00000000"
+            android:divider="@android:color/transparent"
+            android:dividerHeight="8dp"
             android:layout_weight="1" />
     </LinearLayout>
 

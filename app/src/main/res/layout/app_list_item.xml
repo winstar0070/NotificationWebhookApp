@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="64dp"
+    android:layout_height="68dp"
+    android:background="@drawable/card_background"
     android:gravity="center_vertical"
     android:orientation="horizontal"
     android:paddingStart="16dp"
@@ -20,11 +21,16 @@
         android:layout_weight="1"
         android:ellipsize="end"
         android:gravity="center_vertical"
-        android:maxLines="1" />
+        android:maxLines="1"
+        android:textColor="#374151"
+        android:textSize="15sp" />
 
     <CheckBox
         android:id="@+id/appCheckbox"
         android:layout_width="48dp"
-        android:layout_height="48dp" />
+        android:layout_height="48dp"
+        android:button="@drawable/checkbox_selector"
+        android:buttonTint="@null"
+        android:gravity="center" />
 
 </LinearLayout>

@@ -2,9 +2,8 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginTop="6dp"
     android:background="@drawable/card_background"
-    android:minHeight="72dp"
+    android:minHeight="70dp"
     android:orientation="vertical"
     android:paddingStart="16dp"
     android:paddingTop="10dp"
@@ -17,7 +16,8 @@
         android:layout_height="wrap_content"
         android:ellipsize="end"
         android:maxLines="1"
-        android:textSize="16sp"
+        android:textColor="#111827"
+        android:textSize="15sp"
         android:textStyle="bold" />
 
     <TextView
@@ -27,6 +27,7 @@
         android:layout_marginTop="4dp"
         android:ellipsize="end"
         android:maxLines="1"
-        android:textSize="14sp" />
+        android:textColor="#64748B"
+        android:textSize="13sp" />
 
 </LinearLayout>
