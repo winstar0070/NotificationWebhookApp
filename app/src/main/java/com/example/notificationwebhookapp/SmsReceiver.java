@@ -46,16 +46,19 @@ public class SmsReceiver extends BroadcastReceiver {
             }
             forwardSmsIfEnabled(context, prefs, sender, messageBody.toString());
         } catch (Exception e) {
+            SmsForwardStatusReceiver.recordStatus(context, "Incoming SMS processing failed: " + e.getMessage());
             Log.e(TAG, "Failed to process SMS", e);
         }
     }
 
     private void forwardSmsIfEnabled(Context context, SharedPreferences prefs, String sender, String message) {
         if (!prefs.getBoolean(SMS_FORWARD_ENABLED_KEY, false)) {
+            SmsForwardStatusReceiver.recordStatus(context, "Incoming SMS received. Forwarding is off.");
             return;
         }
         String targetNumber = prefs.getString(SMS_FORWARD_NUMBER_KEY, "");
         if (targetNumber == null || targetNumber.trim().isEmpty()) {
+            SmsForwardStatusReceiver.recordStatus(context, "Incoming SMS received. Forward target is empty.");
             Log.w(TAG, "SMS forwarding skipped: target number is empty");
             return;
         }

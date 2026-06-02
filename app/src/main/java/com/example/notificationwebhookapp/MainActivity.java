@@ -382,8 +382,10 @@ public class MainActivity extends AppCompatActivity {
         smsForwardCheckBox.setChecked(prefs.getBoolean(SMS_FORWARD_ENABLED_KEY, false));
         smsForwardNumberEditText.setText(prefs.getString(SMS_FORWARD_NUMBER_KEY, ""));
         smsForwardNumberEditText.setVisibility(smsForwardCheckBox.isChecked() ? View.VISIBLE : View.GONE);
-        smsForwardCheckBox.setOnCheckedChangeListener((buttonView, isChecked) ->
-                smsForwardNumberEditText.setVisibility(isChecked ? View.VISIBLE : View.GONE));
+        smsForwardCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            smsForwardNumberEditText.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+            persistSettings(false);
+        });
         refreshSettingsStatus();
     }
 
@@ -1114,12 +1116,20 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void saveSettings() {
+        if (!persistSettings(true)) {
+            return;
+        }
+        refreshSettingsStatus();
+        Toast.makeText(this, "Settings saved", Toast.LENGTH_SHORT).show();
+    }
+
+    private boolean persistSettings(boolean validateForwardNumber) {
         String forwardNumber = smsForwardNumberEditText.getText() == null
                 ? ""
                 : smsForwardNumberEditText.getText().toString().trim();
-        if (smsForwardCheckBox.isChecked() && forwardNumber.isEmpty()) {
+        if (validateForwardNumber && smsForwardCheckBox.isChecked() && forwardNumber.isEmpty()) {
             Toast.makeText(this, "Forward phone number required", Toast.LENGTH_SHORT).show();
-            return;
+            return false;
         }
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                 .edit()
@@ -1127,8 +1137,7 @@ public class MainActivity extends AppCompatActivity {
                 .putBoolean(SMS_FORWARD_ENABLED_KEY, smsForwardCheckBox.isChecked())
                 .putString(SMS_FORWARD_NUMBER_KEY, forwardNumber)
                 .apply();
-        refreshSettingsStatus();
-        Toast.makeText(this, "Settings saved", Toast.LENGTH_SHORT).show();
+        return true;
     }
 
     private void sendTestSmsForward() {
@@ -1142,6 +1151,10 @@ public class MainActivity extends AppCompatActivity {
         if (!hasSmsPermissions()) {
             requestSmsPermission();
             Toast.makeText(this, "SMS permissions required", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        smsForwardCheckBox.setChecked(true);
+        if (!persistSettings(true)) {
             return;
         }
         boolean queued = SmsForwarder.forward(this, forwardNumber, "NotificationWebhookApp", "Test SMS forwarding message");
