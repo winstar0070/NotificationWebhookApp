@@ -32,9 +32,6 @@ public final class WebhookSender {
     private static final String LEGACY_PREFS_NAME = "NotificationWebhookPrefs";
     private static final String WEBHOOK_URL_KEY = "webhookUrl";
     private static final String WEBHOOK_METHOD_KEY = "webhookMethod";
-    private static final String SMS_FORWARD_ENABLED_KEY = "SmsForwardEnabled";
-    private static final String SMS_FORWARD_NUMBER_KEY = "SmsForwardNumber";
-    private static final String LEGACY_SMS_DESTINATION_MIGRATED_KEY = "LegacySmsDestinationMigrated";
     private static final String WEBHOOKS_KEY = "webhooks";
     private static final String PROJECTS_KEY = "projects";
     private static final String ACTIVE_PROJECT_ID_KEY = "activeProjectId";
@@ -250,34 +247,14 @@ public final class WebhookSender {
         List<ProjectConfig> projects = loadProjects(context);
         for (ProjectConfig project : projects) {
             if (project.id.equals(activeId)) {
-                return migrateLegacySmsDestination(context, project);
+                return project;
             }
         }
         if (!projects.isEmpty()) {
             setActiveProject(context, projects.get(0).id);
-            return migrateLegacySmsDestination(context, projects.get(0));
+            return projects.get(0);
         }
         return null;
-    }
-
-    private static ProjectConfig migrateLegacySmsDestination(Context context, ProjectConfig project) {
-        if (project == null || !project.enabledSmsDestinationNumbers().isEmpty()) {
-            return project;
-        }
-        SharedPreferences legacyPrefs = context.getSharedPreferences(LEGACY_PREFS_NAME, Context.MODE_PRIVATE);
-        if (legacyPrefs.getBoolean(LEGACY_SMS_DESTINATION_MIGRATED_KEY, false)) {
-            return project;
-        }
-        String number = legacyPrefs.getString(SMS_FORWARD_NUMBER_KEY, "");
-        if (!legacyPrefs.getBoolean(SMS_FORWARD_ENABLED_KEY, false) || number == null || number.trim().isEmpty()) {
-            return project;
-        }
-        List<RedirectDestination> destinations = new ArrayList<>(project.destinations);
-        destinations.add(RedirectDestination.sms(number.trim(), true));
-        ProjectConfig migrated = new ProjectConfig(project.id, project.name, project.selectedWebhookUrls, true, project.sources, destinations);
-        saveProject(context, migrated);
-        legacyPrefs.edit().putBoolean(LEGACY_SMS_DESTINATION_MIGRATED_KEY, true).apply();
-        return migrated;
     }
 
     public static void saveProject(Context context, ProjectConfig project) {
