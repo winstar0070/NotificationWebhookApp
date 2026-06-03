@@ -9,13 +9,12 @@ import android.telephony.SmsManager;
 import android.telephony.SubscriptionManager;
 import android.util.Log;
 
-import java.util.ArrayList;
-
 public final class SmsForwarder {
     public static final String SENT_ACTION = "com.example.notificationwebhookapp.SMS_FORWARD_SENT";
     static final String EXTRA_TARGET = "target";
 
     private static final String TAG = "SmsForwarder";
+    private static final int MAX_SINGLE_SMS_CHARS = 67;
 
     private SmsForwarder() {
     }
@@ -31,22 +30,18 @@ public final class SmsForwarder {
         }
 
         try {
-            String body = "From " + (sender == null ? "" : sender) + ": " + (message == null ? "" : message);
+            String body = singleSmsBody(sender, message);
             SmsManager smsManager = smsManager();
-            ArrayList<String> parts = smsManager.divideMessage(body);
-            ArrayList<PendingIntent> sentIntents = new ArrayList<>();
-            for (int i = 0; i < parts.size(); i++) {
-                Intent sentIntent = new Intent(context, SmsForwardStatusReceiver.class)
-                        .setAction(SENT_ACTION)
-                        .putExtra(EXTRA_TARGET, targetNumber.trim());
-                sentIntents.add(PendingIntent.getBroadcast(
-                        context,
-                        (int) (System.currentTimeMillis() % Integer.MAX_VALUE) + i,
-                        sentIntent,
-                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-                ));
-            }
-            smsManager.sendMultipartTextMessage(targetNumber.trim(), null, parts, sentIntents, null);
+            Intent sentIntent = new Intent(context, SmsForwardStatusReceiver.class)
+                    .setAction(SENT_ACTION)
+                    .putExtra(EXTRA_TARGET, targetNumber.trim());
+            PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                    context,
+                    (int) (System.currentTimeMillis() % Integer.MAX_VALUE),
+                    sentIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+            smsManager.sendTextMessage(targetNumber.trim(), null, body, pendingIntent, null);
             SmsForwardStatusReceiver.recordStatus(context, "Forward queued to " + targetNumber.trim());
             Log.d(TAG, "SMS forward queued to " + targetNumber.trim());
             return true;
@@ -55,6 +50,25 @@ public final class SmsForwarder {
             Log.e(TAG, "SMS forward failed", e);
             return false;
         }
+    }
+
+    private static String singleSmsBody(String sender, String message) {
+        String normalizedSender = sender == null ? "" : sender.trim();
+        String normalizedMessage = normalizeWhitespace(message);
+        String body = normalizedSender.isEmpty()
+                ? normalizedMessage
+                : normalizedSender + ": " + normalizedMessage;
+        if (body.length() <= MAX_SINGLE_SMS_CHARS) {
+            return body;
+        }
+        return body.substring(0, MAX_SINGLE_SMS_CHARS - 3) + "...";
+    }
+
+    private static String normalizeWhitespace(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace('\n', ' ').replace('\r', ' ').replaceAll("\\s+", " ").trim();
     }
 
     private static SmsManager smsManager() {

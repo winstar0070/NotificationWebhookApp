@@ -34,6 +34,7 @@ public final class WebhookSender {
     private static final String WEBHOOK_METHOD_KEY = "webhookMethod";
     private static final String SMS_FORWARD_ENABLED_KEY = "SmsForwardEnabled";
     private static final String SMS_FORWARD_NUMBER_KEY = "SmsForwardNumber";
+    private static final String LEGACY_SMS_DESTINATION_MIGRATED_KEY = "LegacySmsDestinationMigrated";
     private static final String WEBHOOKS_KEY = "webhooks";
     private static final String PROJECTS_KEY = "projects";
     private static final String ACTIVE_PROJECT_ID_KEY = "activeProjectId";
@@ -264,6 +265,9 @@ public final class WebhookSender {
             return project;
         }
         SharedPreferences legacyPrefs = context.getSharedPreferences(LEGACY_PREFS_NAME, Context.MODE_PRIVATE);
+        if (legacyPrefs.getBoolean(LEGACY_SMS_DESTINATION_MIGRATED_KEY, false)) {
+            return project;
+        }
         String number = legacyPrefs.getString(SMS_FORWARD_NUMBER_KEY, "");
         if (!legacyPrefs.getBoolean(SMS_FORWARD_ENABLED_KEY, false) || number == null || number.trim().isEmpty()) {
             return project;
@@ -272,6 +276,7 @@ public final class WebhookSender {
         destinations.add(RedirectDestination.sms(number.trim(), true));
         ProjectConfig migrated = new ProjectConfig(project.id, project.name, project.selectedWebhookUrls, true, project.sources, destinations);
         saveProject(context, migrated);
+        legacyPrefs.edit().putBoolean(LEGACY_SMS_DESTINATION_MIGRATED_KEY, true).apply();
         return migrated;
     }
 

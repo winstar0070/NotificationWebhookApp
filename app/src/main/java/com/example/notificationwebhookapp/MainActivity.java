@@ -836,6 +836,14 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         List<RedirectDestination> destinations = new ArrayList<>(activeProject.destinations);
+        for (RedirectDestination destination : destinations) {
+            if (destination != null
+                    && RedirectDestination.TYPE_SMS.equals(destination.type)
+                    && number.equals(destination.phoneNumber)) {
+                Toast.makeText(this, "SMS destination already exists", Toast.LENGTH_SHORT).show();
+                return;
+            }
+        }
         destinations.add(RedirectDestination.sms(number, true));
         saveActiveProject(activeProject.selectedWebhookUrls, activeProject.sources, destinations);
         smsDestinationEditText.setText("");
@@ -1238,8 +1246,22 @@ public class MainActivity extends AppCompatActivity {
             });
             dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener(v -> {
                 List<RedirectDestination> destinations = new ArrayList<>(activeProject.destinations);
-                destinations.remove(destinationIndex);
+                String phone = destination.phoneNumber == null ? "" : destination.phoneNumber;
+                for (int i = destinations.size() - 1; i >= 0; i--) {
+                    RedirectDestination item = destinations.get(i);
+                    if (i == destinationIndex
+                            || (item != null
+                            && RedirectDestination.TYPE_SMS.equals(item.type)
+                            && phone.equals(item.phoneNumber))) {
+                        destinations.remove(i);
+                    }
+                }
                 saveActiveProject(activeProject.selectedWebhookUrls, activeProject.sources, destinations);
+                getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                        .edit()
+                        .putBoolean(SMS_FORWARD_ENABLED_KEY, false)
+                        .remove(SMS_FORWARD_NUMBER_KEY)
+                        .apply();
                 Toast.makeText(this, "SMS destination deleted", Toast.LENGTH_SHORT).show();
                 dialog.dismiss();
             });

@@ -204,11 +204,10 @@ public class NotificationListener extends NotificationListenerService {
         if (project == null) {
             return;
         }
-        String message = "Notification " + packageName
-                + (title == null || title.isEmpty() ? "" : " / " + title)
-                + (text == null || text.isEmpty() ? "" : ": " + text);
+        String sender = title == null || title.isEmpty() ? packageName : title;
+        String message = text == null || text.isEmpty() ? "Notification from " + packageName : text;
         for (String number : project.enabledSmsDestinationNumbers()) {
-            SmsForwarder.forward(this, number, packageName, message);
+            SmsForwarder.forward(this, number, sender, message);
         }
     }
 
