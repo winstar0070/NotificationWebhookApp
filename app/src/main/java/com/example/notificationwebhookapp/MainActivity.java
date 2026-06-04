@@ -58,10 +58,7 @@ import java.util.Set;
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
     private static final String PREFS_NAME = "NotificationWebhookPrefs";
-    private static final String SELECTED_APPS_KEY = "SelectedApps";
-    private static final String SMS_TO_WEBHOOK_KEY = "SmsToWebhook";
-    private static final String SMS_FORWARD_ENABLED_KEY = "SmsForwardEnabled";
-    private static final String SMS_FORWARD_NUMBER_KEY = "SmsForwardNumber";
+    private static final String PROJECT_APP_SOURCES_KEY = "ProjectAppSources";
     private static final String CHANNEL_ID = "my_channel_id";
     private static final int NOTIFICATION_ID = 1;
     private static final int SMS_PERMISSION_REQUEST_CODE = 2;
@@ -1257,11 +1254,6 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
                 saveActiveProject(activeProject.selectedWebhookUrls, activeProject.sources, destinations);
-                getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                        .edit()
-                        .putBoolean(SMS_FORWARD_ENABLED_KEY, false)
-                        .remove(SMS_FORWARD_NUMBER_KEY)
-                        .apply();
                 Toast.makeText(this, "SMS destination deleted", Toast.LENGTH_SHORT).show();
                 dialog.dismiss();
             });
@@ -1332,7 +1324,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void saveSelectedApps() {
-        SharedPreferences.Editor editor = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
         Set<String> selectedAppsSet = new HashSet<>();
         ProjectConfig project = activeProject == null ? WebhookSender.loadActiveProject(this) : activeProject;
         List<RedirectSource> sources = new ArrayList<>();
@@ -1351,8 +1342,10 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        editor.putStringSet(selectedAppsKey(project), selectedAppsSet);
-        editor.apply();
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .edit()
+                .putStringSet(selectedAppsKey(project), selectedAppsSet)
+                .apply();
         if (project != null) {
             saveActiveProject(project.selectedWebhookUrls, sources, project.destinations);
         }
@@ -1382,30 +1375,7 @@ public class MainActivity extends AppCompatActivity {
         if (prefs.contains(projectKey)) {
             return new HashSet<>(prefs.getStringSet(projectKey, new HashSet<>()));
         }
-
-        if (!shouldUseLegacySelectedApps(project)) {
-            return new HashSet<>();
-        }
-
-        Set<String> legacySelectedApps = new HashSet<>(prefs.getStringSet(SELECTED_APPS_KEY, new HashSet<>()));
-        if (legacySelectedApps.isEmpty()) {
-            String selectedAppsString = prefs.getString(SELECTED_APPS_KEY, "");
-            if (!selectedAppsString.isEmpty()) {
-                legacySelectedApps = new HashSet<>(Arrays.asList(selectedAppsString.split(",")));
-            }
-        }
-        if (!legacySelectedApps.isEmpty()
-                && project != null
-                && activeProject != null
-                && project.id.equals(activeProject.id)) {
-            prefs.edit().putStringSet(projectKey, legacySelectedApps).apply();
-            List<RedirectSource> migratedSources = new ArrayList<>(project.sources);
-            for (String packageName : legacySelectedApps) {
-                migratedSources.add(RedirectSource.app(packageName, "", true));
-            }
-            saveActiveProject(project.selectedWebhookUrls, migratedSources, project.destinations);
-        }
-        return legacySelectedApps;
+        return new HashSet<>();
     }
 
     private Set<String> selectedAppPackagesFromSources(ProjectConfig project) {
@@ -1424,21 +1394,10 @@ public class MainActivity extends AppCompatActivity {
         return packages;
     }
 
-    private boolean shouldUseLegacySelectedApps(ProjectConfig project) {
-        if (project == null) {
-            return true;
-        }
-        if ("Default Project".equals(project.name)) {
-            return true;
-        }
-        ProjectConfig active = WebhookSender.loadActiveProject(this);
-        return active != null && project.id.equals(active.id);
-    }
-
     private String selectedAppsKey(ProjectConfig project) {
         return project == null || project.id == null || project.id.isEmpty()
-                ? SELECTED_APPS_KEY
-                : SELECTED_APPS_KEY + "_" + project.id;
+                ? PROJECT_APP_SOURCES_KEY
+                : PROJECT_APP_SOURCES_KEY + "_" + project.id;
     }
 
     private void checkNotificationListenerEnabled() {

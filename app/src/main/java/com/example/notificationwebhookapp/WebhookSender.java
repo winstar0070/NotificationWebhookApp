@@ -29,9 +29,6 @@ import javax.crypto.spec.SecretKeySpec;
 
 public final class WebhookSender {
     private static final String TAG = "WebhookSender";
-    private static final String LEGACY_PREFS_NAME = "NotificationWebhookPrefs";
-    private static final String WEBHOOK_URL_KEY = "webhookUrl";
-    private static final String WEBHOOK_METHOD_KEY = "webhookMethod";
     private static final String WEBHOOKS_KEY = "webhooks";
     private static final String PROJECTS_KEY = "projects";
     private static final String ACTIVE_PROJECT_ID_KEY = "activeProjectId";
@@ -167,24 +164,10 @@ public final class WebhookSender {
     public static List<WebhookConfig> loadAllWebhookConfigs(Context context) {
         List<WebhookConfig> secureConfigs = loadConfigsFromPrefs(SecurePreferences.get(context));
         if (!secureConfigs.isEmpty()) {
-            List<WebhookConfig> migratedProjectConfigs = collectLegacyProjectWebhooks(context);
-            if (!migratedProjectConfigs.isEmpty()) {
-                secureConfigs.addAll(migratedProjectConfigs);
-                secureConfigs = dedupeConfigs(secureConfigs);
-                saveGlobalWebhookConfigs(context, secureConfigs);
-            }
             ensureDefaultProject(context, secureConfigs);
             return dedupeConfigs(secureConfigs);
         }
-
-        List<WebhookConfig> legacyConfigs = loadConfigsFromPrefs(context.getSharedPreferences(LEGACY_PREFS_NAME, Context.MODE_PRIVATE));
-        legacyConfigs.addAll(collectLegacyProjectWebhooks(context));
-        legacyConfigs = dedupeConfigs(legacyConfigs);
-        if (!legacyConfigs.isEmpty()) {
-            saveGlobalWebhookConfigs(context, legacyConfigs);
-            ensureDefaultProject(context, legacyConfigs);
-        }
-        return legacyConfigs;
+        return new ArrayList<>();
     }
 
     public static void saveWebhookConfigs(Context context, List<WebhookConfig> configs) {
@@ -206,14 +189,6 @@ public final class WebhookSender {
                 .putString(WEBHOOKS_KEY, jsonArray.toString())
                 .apply();
 
-        // Keep legacy summary keys for old code paths during migration only.
-        SharedPreferences.Editor legacyEditor = context.getSharedPreferences(LEGACY_PREFS_NAME, Context.MODE_PRIVATE).edit();
-        legacyEditor.remove(WEBHOOKS_KEY);
-        if (!deduped.isEmpty()) {
-            legacyEditor.putString(WEBHOOK_URL_KEY, deduped.get(0).url);
-            legacyEditor.putString(WEBHOOK_METHOD_KEY, deduped.get(0).method);
-        }
-        legacyEditor.apply();
     }
 
     public static List<ProjectConfig> loadProjects(Context context) {
@@ -231,9 +206,6 @@ public final class WebhookSender {
 
         if (projects.isEmpty()) {
             List<WebhookConfig> legacyConfigs = loadAllWebhookConfigs(context);
-            if (legacyConfigs.isEmpty()) {
-                legacyConfigs = loadConfigsFromPrefs(context.getSharedPreferences(LEGACY_PREFS_NAME, Context.MODE_PRIVATE));
-            }
             ProjectConfig defaultProject = new ProjectConfig("", "Default Project", legacyConfigs);
             projects.add(defaultProject);
             saveProjects(context, projects, defaultProject.id);
@@ -348,30 +320,6 @@ public final class WebhookSender {
         return dedupeConfigs(filtered);
     }
 
-    private static List<WebhookConfig> collectLegacyProjectWebhooks(Context context) {
-        SharedPreferences prefs = SecurePreferences.get(context);
-        List<WebhookConfig> configs = new ArrayList<>();
-        try {
-            JSONArray array = new JSONArray(prefs.getString(PROJECTS_KEY, "[]"));
-            for (int i = 0; i < array.length(); i++) {
-                JSONObject projectJson = array.optJSONObject(i);
-                JSONArray webhookArray = projectJson == null ? null : projectJson.optJSONArray("webhooks");
-                if (webhookArray == null) {
-                    continue;
-                }
-                for (int j = 0; j < webhookArray.length(); j++) {
-                    WebhookConfig config = WebhookConfig.fromJson(webhookArray.optJSONObject(j));
-                    if (!config.url.isEmpty()) {
-                        configs.add(config);
-                    }
-                }
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to collect project webhooks", e);
-        }
-        return dedupeConfigs(configs);
-    }
-
     private static void pruneProjectWebhookSelections(Context context, List<WebhookConfig> configs) {
         Set<String> validUrls = new HashSet<>(urlsFromConfigs(configs));
         List<ProjectConfig> projects = loadProjects(context);
@@ -457,14 +405,6 @@ public final class WebhookSender {
             }
         } catch (Exception e) {
             Log.e(TAG, "Failed to parse webhook endpoints", e);
-        }
-
-        if (endpoints.isEmpty()) {
-            String legacyUrl = prefs.getString(WEBHOOK_URL_KEY, "");
-            String legacyMethod = prefs.getString(WEBHOOK_METHOD_KEY, "POST");
-            if (legacyUrl != null && !legacyUrl.isEmpty()) {
-                endpoints.add(new WebhookConfig(legacyUrl, normalizeMethod(legacyMethod), false, "", ""));
-            }
         }
 
         return endpoints;

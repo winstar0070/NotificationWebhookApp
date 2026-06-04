@@ -1,7 +1,6 @@
 package com.example.notificationwebhookapp;
 
 import android.app.Notification;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.service.notification.NotificationListenerService;
@@ -12,7 +11,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -22,8 +20,6 @@ import java.util.Set;
 public class NotificationListener extends NotificationListenerService {
 
     private static final String TAG = "NotificationListener";
-    private static final String PREFS_NAME = "NotificationWebhookPrefs";
-    private static final String SELECTED_APPS_KEY = "SelectedApps";
     private static final long DUPLICATE_WINDOW_MS = 2000L;
     private static final Map<String, Long> RECENT_NOTIFICATIONS = new LinkedHashMap<String, Long>() {
         @Override
@@ -161,27 +157,7 @@ public class NotificationListener extends NotificationListenerService {
         if (!sourceApps.isEmpty()) {
             return sourceApps;
         }
-        SharedPreferences sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        String projectKey = selectedAppsKey(project);
-        if (sharedPreferences.contains(projectKey)) {
-            return new HashSet<>(sharedPreferences.getStringSet(projectKey, new HashSet<>()));
-        }
-
-        if (!shouldUseLegacySelectedApps(project)) {
-            return new HashSet<>();
-        }
-
-        Set<String> legacySelectedApps = new HashSet<>(sharedPreferences.getStringSet(SELECTED_APPS_KEY, new HashSet<>()));
-        if (legacySelectedApps.isEmpty()) {
-            String selectedAppsString = sharedPreferences.getString(SELECTED_APPS_KEY, "");
-            if (!selectedAppsString.isEmpty()) {
-                legacySelectedApps = new HashSet<>(Arrays.asList(selectedAppsString.split(",")));
-            }
-        }
-        if (!legacySelectedApps.isEmpty() && project != null) {
-            sharedPreferences.edit().putStringSet(projectKey, legacySelectedApps).apply();
-        }
-        return legacySelectedApps;
+        return new HashSet<>();
     }
 
     private Set<String> selectedAppPackagesFromSources(ProjectConfig project) {
@@ -209,23 +185,6 @@ public class NotificationListener extends NotificationListenerService {
         for (String number : project.enabledSmsDestinationNumbers()) {
             SmsForwarder.forward(this, number, sender, message);
         }
-    }
-
-    private boolean shouldUseLegacySelectedApps(ProjectConfig project) {
-        if (project == null) {
-            return true;
-        }
-        if ("Default Project".equals(project.name)) {
-            return true;
-        }
-        ProjectConfig active = WebhookSender.loadActiveProject(this);
-        return active != null && project.id.equals(active.id);
-    }
-
-    private String selectedAppsKey(ProjectConfig project) {
-        return project == null || project.id == null || project.id.isEmpty()
-                ? SELECTED_APPS_KEY
-                : SELECTED_APPS_KEY + "_" + project.id;
     }
 
     private static String textFromExtra(Notification notification, String key) {

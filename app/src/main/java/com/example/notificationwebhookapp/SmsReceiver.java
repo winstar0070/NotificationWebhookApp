@@ -3,7 +3,6 @@ package com.example.notificationwebhookapp;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.provider.Telephony;
 import android.telephony.SmsMessage;
 import android.util.Log;
@@ -12,10 +11,6 @@ import org.json.JSONObject;
 
 public class SmsReceiver extends BroadcastReceiver {
     private static final String TAG = "SmsReceiver";
-    private static final String PREFS_NAME = "NotificationWebhookPrefs";
-    private static final String SMS_TO_WEBHOOK_KEY = "SmsToWebhook";
-    private static final String SMS_FORWARD_ENABLED_KEY = "SmsForwardEnabled";
-    private static final String SMS_FORWARD_NUMBER_KEY = "SmsForwardNumber";
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -33,7 +28,6 @@ public class SmsReceiver extends BroadcastReceiver {
                 messageBody.append(smsMessage.getMessageBody());
             }
 
-            SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
             ProjectConfig activeProject = WebhookSender.loadActiveProject(context);
             JSONObject payload = new JSONObject()
                     .put("type", "sms")
@@ -65,11 +59,9 @@ public class SmsReceiver extends BroadcastReceiver {
             }
 
             int queuedDestinationCount = 0;
-            if (prefs.getBoolean(SMS_TO_WEBHOOK_KEY, true)) {
-                WebhookSender.send(context, payload.toString());
-                queuedDestinationCount += activeProject == null ? 0 : activeProject.enabledWebhookDestinationUrls().size();
-                Log.d(TAG, "SMS webhook queued");
-            }
+            WebhookSender.send(context, payload.toString());
+            queuedDestinationCount += activeProject == null ? 0 : activeProject.enabledWebhookDestinationUrls().size();
+            Log.d(TAG, "SMS webhook queued");
             queuedDestinationCount += forwardSmsDestinations(context, activeProject, sender, messageBody.toString());
             WebhookHistoryStore.recordRedirectEvent(
                     context,
